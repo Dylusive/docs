@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store/bookStore'
+import { useStore, useActiveBook } from '../store/bookStore'
 import { MainFrame } from '../components/layout/MainFrame'
 import { HolographicCard } from '../components/ui/HolographicCard'
 import { GlowButton } from '../components/ui/GlowButton'
+import type { Book } from '../types'
 
 function ChapterCard({ chapter, index, onEdit, onDelete }: {
   chapter: { id: string; title: string; order: number; wordCount: number; accentColor: string; content: string }
@@ -26,7 +27,6 @@ function ChapterCard({ chapter, index, onEdit, onDelete }: {
     >
       <HolographicCard hover glowColor={chapter.accentColor} onClick={onEdit} padding="p-0">
         <div className="p-4">
-          {/* Chapter number badge */}
           <div className="flex items-start justify-between mb-3">
             <span
               className="text-xs font-mono px-2 py-0.5 rounded"
@@ -85,8 +85,125 @@ function ChapterCard({ chapter, index, onEdit, onDelete }: {
   )
 }
 
+function BookLibrary({ onClose }: { onClose: () => void }) {
+  const { books, activeBookId, createBook, switchBook, deleteBook, duplicateBook } = useStore()
+  const [newTitle, setNewTitle] = useState('')
+  const [creating, setCreating] = useState(false)
+
+  const handleCreate = () => {
+    const title = newTitle.trim() || 'Untitled Book'
+    const id = createBook({ title })
+    switchBook(id)
+    setNewTitle('')
+    setCreating(false)
+    onClose()
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center"
+      style={{ background: 'rgba(8,8,16,0.9)', backdropFilter: 'blur(8px)' }}
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.95, y: 10 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.95 }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <HolographicCard className="w-full max-w-md mx-4 max-h-[80vh] overflow-y-auto" padding="p-6">
+          <h2 className="font-mono font-bold text-sm mb-5" style={{ color: '#ffd700' }}>
+            ✦ BOOK LIBRARY
+          </h2>
+
+          <div className="space-y-2 mb-4">
+            {books.map((b: Book) => (
+              <div
+                key={b.id}
+                className="flex items-center gap-2 p-3 rounded transition-all"
+                style={{
+                  background: b.id === activeBookId ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${b.id === activeBookId ? 'rgba(255,215,0,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                }}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-mono truncate" style={{ color: b.id === activeBookId ? '#ffd700' : 'rgba(255,255,255,0.7)' }}>
+                    {b.title}
+                  </p>
+                  <p className="text-xs font-mono mt-0.5" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                    {b.chapters.length} ch · {b.chapters.reduce((s, c) => s + c.wordCount, 0).toLocaleString()} words
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {b.id !== activeBookId && (
+                    <button
+                      onClick={() => { switchBook(b.id); onClose() }}
+                      className="text-xs px-2 py-1 rounded font-mono transition-all"
+                      style={{ background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.25)', color: '#00e5ff' }}
+                    >
+                      Open
+                    </button>
+                  )}
+                  <button
+                    onClick={() => duplicateBook(b.id)}
+                    className="text-xs px-2 py-1 rounded font-mono transition-all"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}
+                    title="Duplicate"
+                  >
+                    ⧉
+                  </button>
+                  {books.length > 1 && (
+                    <button
+                      onClick={() => deleteBook(b.id)}
+                      className="text-xs px-1.5 py-1 rounded font-mono transition-all"
+                      style={{ color: 'rgba(239,68,68,0.5)', border: '1px solid rgba(239,68,68,0.15)' }}
+                      title="Delete"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <AnimatePresence>
+            {creating ? (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="flex gap-2 overflow-hidden"
+              >
+                <input
+                  autoFocus
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') setCreating(false) }}
+                  placeholder="New book title..."
+                  className="flex-1 px-3 py-2 rounded text-sm font-mono outline-none"
+                  style={{ background: 'rgba(255,215,0,0.05)', border: '1px solid rgba(255,215,0,0.25)', color: 'rgba(255,255,255,0.9)' }}
+                />
+                <GlowButton onClick={handleCreate}>Create</GlowButton>
+              </motion.div>
+            ) : (
+              <GlowButton onClick={() => setCreating(true)} className="w-full justify-center" icon={<span>+</span>}>
+                New Book
+              </GlowButton>
+            )}
+          </AnimatePresence>
+        </HolographicCard>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 function BookSettings() {
-  const { book, updateBook, apiKey, setApiKey } = useStore()
+  const book = useActiveBook()
+  const { updateBook, apiKey, setApiKey } = useStore()
   const [editing, setEditing] = useState(false)
   const [showKey, setShowKey] = useState(false)
 
@@ -146,6 +263,27 @@ function BookSettings() {
             />
           </div>
           <div>
+            <label className="block text-xs font-mono mb-1" style={{ color: 'rgba(0,229,255,0.6)' }}>Dedication</label>
+            <input
+              value={book.dedication ?? ''}
+              onChange={(e) => updateBook({ dedication: e.target.value })}
+              className="w-full px-3 py-2 rounded text-sm font-sans outline-none"
+              style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.2)', color: 'rgba(255,255,255,0.9)' }}
+              placeholder="For..."
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-mono mb-1" style={{ color: 'rgba(0,229,255,0.6)' }}>Epigraph</label>
+            <textarea
+              value={book.epigraph ?? ''}
+              onChange={(e) => updateBook({ epigraph: e.target.value })}
+              rows={2}
+              className="w-full px-3 py-2 rounded text-sm font-sans outline-none resize-none"
+              style={{ background: 'rgba(0,229,255,0.05)', border: '1px solid rgba(0,229,255,0.2)', color: 'rgba(255,255,255,0.9)', fontStyle: 'italic' }}
+              placeholder="Opening quote..."
+            />
+          </div>
+          <div>
             <label className="block text-xs font-mono mb-1" style={{ color: 'rgba(0,229,255,0.6)' }}>Book Accent Color</label>
             <div className="flex items-center gap-2">
               <input
@@ -195,8 +333,10 @@ function BookSettings() {
 }
 
 export function CommandCenter() {
-  const { book, addChapter, deleteChapter } = useStore()
+  const book = useActiveBook()
+  const { addChapter, deleteChapter } = useStore()
   const navigate = useNavigate()
+  const [showLibrary, setShowLibrary] = useState(false)
 
   const totalWords = book.chapters.reduce((s, c) => s + c.wordCount, 0)
   const sorted = [...book.chapters].sort((a, b) => a.order - b.order)
@@ -213,12 +353,20 @@ export function CommandCenter() {
         <div className="flex-shrink-0 px-6 pt-6 pb-4">
           <div className="flex items-end justify-between">
             <div>
-              <h1
-                className="text-2xl font-mono font-bold tracking-tight"
-                style={{ color: '#ffd700', textShadow: '0 0 20px rgba(255,215,0,0.4)' }}
+              <button
+                onClick={() => setShowLibrary(true)}
+                className="flex items-center gap-2 group"
               >
-                {book.title}
-              </h1>
+                <h1
+                  className="text-2xl font-mono font-bold tracking-tight group-hover:opacity-80 transition-opacity"
+                  style={{ color: '#ffd700', textShadow: '0 0 20px rgba(255,215,0,0.4)' }}
+                >
+                  {book.title}
+                </h1>
+                <span className="text-xs font-mono opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: 'rgba(255,215,0,0.4)' }}>
+                  ⇄ switch
+                </span>
+              </button>
               <p className="text-sm font-mono mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
                 by {book.author}
               </p>
@@ -231,6 +379,7 @@ export function CommandCenter() {
                   { label: 'CHAPTERS', value: book.chapters.length },
                   { label: 'WORDS', value: totalWords.toLocaleString() },
                   { label: 'CONCEPTS', value: book.concepts.length },
+                  { label: 'CHARACTERS', value: book.characters.length },
                 ].map((stat) => (
                   <div key={stat.label} className="text-center">
                     <div className="text-lg font-mono font-bold" style={{ color: '#00e5ff' }}>{stat.value}</div>
@@ -253,6 +402,24 @@ export function CommandCenter() {
               {book.synopsis}
             </p>
           )}
+
+          {/* Quick nav to new sections */}
+          <div className="flex gap-2 mt-4">
+            <button
+              onClick={() => navigate('/characters')}
+              className="text-xs font-mono px-3 py-1.5 rounded transition-all"
+              style={{ background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)', color: 'rgba(139,92,246,0.7)' }}
+            >
+              👤 Character Bible {book.characters.length > 0 && `(${book.characters.length})`}
+            </button>
+            <button
+              onClick={() => navigate('/cover')}
+              className="text-xs font-mono px-3 py-1.5 rounded transition-all"
+              style={{ background: 'rgba(255,215,0,0.05)', border: '1px solid rgba(255,215,0,0.15)', color: 'rgba(255,215,0,0.5)' }}
+            >
+              ✦ Cover Designer {book.cover && '✓'}
+            </button>
+          </div>
         </div>
 
         {/* Divider */}
@@ -329,6 +496,10 @@ export function CommandCenter() {
           </span>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showLibrary && <BookLibrary onClose={() => setShowLibrary(false)} />}
+      </AnimatePresence>
     </MainFrame>
   )
 }

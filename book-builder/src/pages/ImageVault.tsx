@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store/bookStore'
+import { useStore, useActiveBook } from '../store/bookStore'
 import { MainFrame } from '../components/layout/MainFrame'
 import { HolographicCard } from '../components/ui/HolographicCard'
 import { GlowButton } from '../components/ui/GlowButton'
@@ -15,7 +15,8 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 export function ImageVault() {
-  const { book, addFolder, renameFolder, deleteFolder, addImage, deleteImage } = useStore()
+  const book = useActiveBook()
+  const { addFolder, renameFolder, deleteFolder, addImage, deleteImage } = useStore()
   const [activeFolderId, setActiveFolderId] = useState(book.imageFolders[0]?.id ?? '')
   const [preview, setPreview] = useState<string | null>(null)
   const [newFolderName, setNewFolderName] = useState('')

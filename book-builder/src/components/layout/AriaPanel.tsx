@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../../store/bookStore'
+import { useStore, useActiveBook } from '../../store/bookStore'
 import { streamAriaResponse } from '../../api/aria'
 import { AriaChat } from '../aria/AriaChat'
 import { AriaInput } from '../aria/AriaInput'
@@ -11,7 +11,8 @@ interface Props {
 }
 
 export function AriaPanel({ contextNote }: Props) {
-  const { book, ariaMessages, ariaOpen, apiKey, addAriaMessage, updateAriaMessage, clearAriaMessages } = useStore()
+  const book = useActiveBook()
+  const { ariaMessages, ariaOpen, apiKey, addAriaMessage, updateAriaMessage, clearAriaMessages } = useStore()
   const [streaming, setStreaming] = useState(false)
 
   const isStreaming = ariaMessages.some((m) => m.isStreaming)

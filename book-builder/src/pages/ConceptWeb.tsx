@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store/bookStore'
+import { useStore, useActiveBook } from '../store/bookStore'
 import { MainFrame } from '../components/layout/MainFrame'
 import { HolographicCard } from '../components/ui/HolographicCard'
 import { GlowButton } from '../components/ui/GlowButton'
@@ -78,7 +78,8 @@ interface EditPanelProps {
 }
 
 function EditPanel({ concept, onClose }: EditPanelProps) {
-  const { updateConcept, deleteConcept, book, linkConceptToChapter } = useStore()
+  const book = useActiveBook()
+  const { updateConcept, deleteConcept, linkConceptToChapter } = useStore()
   const [title, setTitle] = useState(concept.title)
   const [desc, setDesc] = useState(concept.description)
 
@@ -174,7 +175,8 @@ function EditPanel({ concept, onClose }: EditPanelProps) {
 }
 
 export function ConceptWeb() {
-  const { book, addConcept, updateConcept, linkConcepts, unlinkConcepts } = useStore()
+  const book = useActiveBook()
+  const { addConcept, updateConcept, linkConcepts, unlinkConcepts } = useStore()
   const canvasRef = useRef<HTMLDivElement>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [linkingFromId, setLinkingFromId] = useState<string | null>(null)

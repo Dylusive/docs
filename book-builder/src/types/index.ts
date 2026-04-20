@@ -22,6 +22,11 @@ export interface PlacedImage {
   caption: string
 }
 
+export interface GeneratedLayoutRef {
+  layout: unknown
+  generatedAt: string
+}
+
 export interface Chapter {
   id: string
   title: string
@@ -33,6 +38,8 @@ export interface Chapter {
   wordCount: number
   createdAt: string
   updatedAt: string
+  cachedLayout?: GeneratedLayoutRef
+  stylePreset?: string
 }
 
 export interface Concept {
@@ -46,15 +53,47 @@ export interface Concept {
   linkedChapterIds: string[]
 }
 
+export interface Character {
+  id: string
+  name: string
+  role: string
+  description: string
+  traits: string[]
+  color: string
+  imageId?: string
+  notes: string
+}
+
+export interface GeneratedCover {
+  svg: string
+  paletteNotes: string
+  generatedAt: string
+}
+
+export type StylePreset =
+  | 'auto'
+  | 'bloom-hour'
+  | 'cinematic-noir'
+  | 'editorial-literary'
+  | 'mystical-oracle'
+  | 'minimalist'
+  | 'vintage-grimoire'
+  | 'terminal-arcane'
+
 export interface Book {
   id: string
   title: string
   author: string
   coverColor: string
   synopsis: string
+  stylePreset?: StylePreset
+  dedication?: string
+  epigraph?: string
   chapters: Chapter[]
   concepts: Concept[]
+  characters: Character[]
   imageFolders: ImageFolder[]
+  cover?: GeneratedCover
   createdAt: string
   updatedAt: string
 }
@@ -68,7 +107,8 @@ export interface AriaMessage {
 }
 
 export interface AppState {
-  book: Book
+  books: Book[]
+  activeBookId: string | null
   ariaMessages: AriaMessage[]
   ariaOpen: boolean
   apiKey: string

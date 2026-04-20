@@ -1,13 +1,15 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useStore } from '../store/bookStore'
+import { useStore, useActiveBook } from '../store/bookStore'
 import { MainFrame } from '../components/layout/MainFrame'
 import { HolographicCard } from '../components/ui/HolographicCard'
 import { GlowButton } from '../components/ui/GlowButton'
 import { buildChapterLayout } from '../api/ariaLayout'
 import type { GeneratedLayout } from '../api/ariaLayout'
 import { ChapterPreview } from '../components/editor/ChapterPreview'
+import { AriaRewrite } from '../components/editor/AriaRewrite'
+import { EtymologyOracle } from '../components/editor/EtymologyOracle'
 
 const ACCENT_PRESETS = [
   '#00e5ff', '#8b5cf6', '#ffd700', '#10b981', '#f59e0b',
@@ -69,7 +71,6 @@ function RichTextToolbar({ onFormat, accentColor }: { onFormat: (cmd: string, va
 
       <div className="w-px h-4 mx-1" style={{ background: `${accentColor}20` }} />
 
-      {/* Text align */}
       {(['left', 'center', 'right'] as const).map((align) => (
         <button
           key={align}
@@ -90,7 +91,8 @@ function RichTextToolbar({ onFormat, accentColor }: { onFormat: (cmd: string, va
 }
 
 function PlacedImageBlock({ placedId, chapterId, accentColor }: { placedId: string; chapterId: string; accentColor: string }) {
-  const { book, updatePlacedImage, removePlacedImage, getImage } = useStore()
+  const book = useActiveBook()
+  const { updatePlacedImage, removePlacedImage, getImage } = useStore()
   const chapter = book.chapters.find((c) => c.id === chapterId)
   const placed = chapter?.placedImages.find((p) => p.id === placedId)
   const image = placed ? getImage(placed.imageId) : undefined
@@ -113,7 +115,6 @@ function PlacedImageBlock({ placedId, chapterId, accentColor }: { placedId: stri
         </p>
       )}
 
-      {/* Controls on hover */}
       <div className="absolute inset-x-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity p-2 flex gap-1 flex-wrap"
         style={{ background: 'rgba(0,0,0,0.8)' }}>
         <select
@@ -143,36 +144,40 @@ function PlacedImageBlock({ placedId, chapterId, accentColor }: { placedId: stri
 export function ChapterView() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { book, updateChapter, addChapter, deleteChapter, addPlacedImage } = useStore()
+  const book = useActiveBook()
+  const { updateChapter, addChapter, deleteChapter, addPlacedImage, apiKey } = useStore()
 
   const chapter = book.chapters.find((c) => c.id === id)
   const sorted = [...book.chapters].sort((a, b) => a.order - b.order)
 
   const editorRef = useRef<HTMLDivElement>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout>>()
+  const selectionRangeRef = useRef<Range | null>(null)
+
   const [showImagePicker, setShowImagePicker] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
   const [generatedLayout, setGeneratedLayout] = useState<GeneratedLayout | null>(null)
   const [buildingLayout, setBuildingLayout] = useState(false)
   const [layoutError, setLayoutError] = useState('')
+  const [selectedText, setSelectedText] = useState('')
+  const [ariaRewriteOpen, setAriaRewriteOpen] = useState(false)
+  const [showOracle, setShowOracle] = useState(false)
 
   const handleBuildLayout = async () => {
     if (!chapter || buildingLayout) return
-    const { apiKey } = useStore.getState()
-    if (!apiKey) { setLayoutError('No API key — add it in ⚙ settings'); return }
+    const storeApiKey = useStore.getState().apiKey
+    if (!storeApiKey) { setLayoutError('No API key — add it in ⚙ settings'); return }
 
     setBuildingLayout(true)
     setLayoutError('')
 
-    // Gather all images placed in this chapter
     const { getImage } = useStore.getState()
     const images = chapter.placedImages
       .map((p) => getImage(p.imageId))
       .filter(Boolean) as import('../types').BookImage[]
 
     try {
-      const layout = await buildChapterLayout(apiKey, chapter, images)
-      // Attach imageUrls for placed images
+      const layout = await buildChapterLayout(storeApiKey, chapter, images, book)
       layout.sections = layout.sections.map((s) => {
         if (s.type === 'image' && s.imageId) {
           const img = getImage(s.imageId)
@@ -197,6 +202,22 @@ export function ChapterView() {
     }
   }, [id])
 
+  // Track text selection for Aria Rewrite
+  const handleSelectionChange = useCallback(() => {
+    const sel = window.getSelection()
+    if (sel && sel.toString().trim() && editorRef.current?.contains(sel.anchorNode)) {
+      setSelectedText(sel.toString())
+      if (sel.rangeCount > 0) selectionRangeRef.current = sel.getRangeAt(0).cloneRange()
+    } else if (!sel?.toString().trim()) {
+      setSelectedText('')
+    }
+  }, [])
+
+  useEffect(() => {
+    document.addEventListener('selectionchange', handleSelectionChange)
+    return () => document.removeEventListener('selectionchange', handleSelectionChange)
+  }, [handleSelectionChange])
+
   const handleInput = useCallback(() => {
     if (!editorRef.current || !id) return
     const html = editorRef.current.innerHTML
@@ -218,6 +239,21 @@ export function ChapterView() {
     if (!id) return
     addPlacedImage(id, imageId)
     setShowImagePicker(false)
+  }
+
+  // Insert rewritten text at the saved selection range
+  const handleInsertRewrite = (text: string) => {
+    editorRef.current?.focus()
+    const range = selectionRangeRef.current
+    if (range) {
+      const sel = window.getSelection()
+      sel?.removeAllRanges()
+      sel?.addRange(range)
+      document.execCommand('insertText', false, text)
+    }
+    handleInput()
+    setSelectedText('')
+    selectionRangeRef.current = null
   }
 
   if (!chapter) {
@@ -274,13 +310,42 @@ export function ChapterView() {
               </motion.button>
             ))}
           </div>
+
+          {/* Etymology Oracle toggle */}
+          <div className="flex-shrink-0 border-t" style={{ borderColor: 'rgba(0,229,255,0.08)' }}>
+            <button
+              onClick={() => setShowOracle(!showOracle)}
+              className="w-full px-3 py-2 text-xs font-mono flex items-center gap-2 transition-colors"
+              style={{ color: showOracle ? '#00e5ff' : 'rgba(0,229,255,0.35)' }}
+            >
+              <span>◈</span>
+              <span>Etymology Oracle</span>
+              <span className="ml-auto">{showOracle ? '▲' : '▼'}</span>
+            </button>
+            <AnimatePresence>
+              {showOracle && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="overflow-hidden px-3 pb-3"
+                >
+                  <EtymologyOracle
+                    apiKey={apiKey}
+                    bookContext={`${book.title} by ${book.author}. ${book.synopsis}`}
+                    accentColor={chapter.accentColor}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* Main editor area */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Chapter header */}
           <div className="flex-shrink-0 px-6 pt-4 pb-2">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
               <span className="text-xs font-mono px-2 py-0.5 rounded" style={{
                 background: `${chapter.accentColor}15`,
                 border: `1px solid ${chapter.accentColor}30`,
@@ -313,7 +378,28 @@ export function ChapterView() {
                 />
               </div>
 
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex items-center gap-2 flex-wrap">
+                {/* Aria Rewrite button (shown when text selected) */}
+                <AnimatePresence>
+                  {selectedText && !previewMode && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      onClick={() => setAriaRewriteOpen(true)}
+                      className="flex items-center gap-1 px-3 py-1.5 rounded text-xs font-mono transition-all"
+                      style={{
+                        background: 'rgba(139,92,246,0.15)',
+                        border: '1px solid rgba(139,92,246,0.4)',
+                        color: '#a78bfa',
+                        boxShadow: '0 0 12px rgba(139,92,246,0.2)',
+                      }}
+                    >
+                      ✦ Aria Rewrite
+                    </motion.button>
+                  )}
+                </AnimatePresence>
+
                 {/* Edit / Preview toggle */}
                 <div className="flex rounded overflow-hidden border" style={{ borderColor: 'rgba(0,229,255,0.2)' }}>
                   <button
@@ -380,14 +466,13 @@ export function ChapterView() {
                   Delete
                 </GlowButton>
               </div>
-
-              {/* Error message */}
-              {layoutError && (
-                <div className="mt-2 text-xs font-mono px-2 py-1 rounded" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
-                  ⚠ {layoutError}
-                </div>
-              )}
             </div>
+
+            {layoutError && (
+              <div className="mb-2 text-xs font-mono px-2 py-1 rounded" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                ⚠ {layoutError}
+              </div>
+            )}
 
             <input
               value={chapter.title}
@@ -515,6 +600,21 @@ export function ChapterView() {
               </HolographicCard>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Aria Rewrite modal */}
+      <AnimatePresence>
+        {ariaRewriteOpen && selectedText && (
+          <AriaRewrite
+            apiKey={apiKey}
+            book={book}
+            selectedText={selectedText}
+            chapterContext={chapter.content.replace(/<[^>]+>/g, '').slice(0, 500)}
+            accentColor={chapter.accentColor}
+            onInsert={handleInsertRewrite}
+            onClose={() => setAriaRewriteOpen(false)}
+          />
         )}
       </AnimatePresence>
 

@@ -1,15 +1,40 @@
 import Anthropic from '@anthropic-ai/sdk'
-import type { Chapter, BookImage } from '../types'
+import type { Chapter, BookImage, Book } from '../types'
 
 export interface LayoutSection {
-  type: 'title' | 'dropcap' | 'body' | 'pullquote' | 'image' | 'divider' | 'subheading'
+  type:
+    | 'title'
+    | 'subtitle'
+    | 'epigraph'
+    | 'dropcap'
+    | 'body'
+    | 'pullquote'
+    | 'poetry'
+    | 'fragment'
+    | 'dialogue'
+    | 'aria_data'
+    | 'wordsplit'
+    | 'scream'
+    | 'whisper'
+    | 'sigil_row'
+    | 'letter'
+    | 'spell'
+    | 'etymology'
+    | 'image'
+    | 'divider'
+    | 'subheading'
   content?: string
+  speaker?: string
+  glyphs?: string[]
+  word?: string
+  roots?: string
   imageId?: string
   imageUrl?: string
   caption?: string
   alignment?: 'left' | 'center' | 'right' | 'full'
   widthPercent?: number
   style?: string
+  emphasis?: 'low' | 'medium' | 'high' | 'extreme'
 }
 
 export interface GeneratedLayout {
@@ -21,53 +46,108 @@ export interface GeneratedLayout {
   designNotes: string
 }
 
+const STYLE_PRESET_INSTRUCTIONS: Record<string, string> = {
+  auto: 'Choose the best style based on the content and mood.',
+  'bloom-hour': `THE BLOOM HOUR aesthetic: blood-moon crimson (#8b0000 to #dc143c), \
+void-black background (#050508), gold accents (#c8a951), electric violet (#7b2d8b). \
+Embrace the sacred-profane. Use FRAGMENT for dramatic single lines. \
+Use ARIA_DATA for clinical/analytical asides. Use WORDSPLIT to dissect words (BE-LIE-VE, F-V-C-K). \
+Use POETRY for verse-like passages. Use SPELL for ritual/incantation moments. \
+Use SIGIL_ROW for ornamental breaks (✦ 🩸 🌕 ⚡ ◈ ∴). Use SCREAM for peak intensity. \
+Use WHISPER for quiet sacred asides. Background: deep radial gradients from near-black to deep crimson/violet.`,
+  'cinematic-noir': 'Dark, moody, stark. High-contrast black/silver/electric blue. Film noir energy.',
+  'editorial-literary': 'Clean, sophisticated. Serif-forward. Ivory tones, deep navy or forest green accents.',
+  'mystical-oracle': 'Mystical, dreamy. Deep purple, midnight blue, gold. Stars and sacred geometry.',
+  minimalist: 'White space is the aesthetic. Minimal color, maximum impact through space and silence.',
+  'vintage-grimoire': 'Old manuscript. Sepia, parchment, ink-black, wax-seal crimson. Aged wisdom.',
+  'terminal-arcane': 'Terminal/hacker meets occult. Monospaced fonts, terminal green on black. Data as ritual.',
+}
+
 export async function buildChapterLayout(
   apiKey: string,
   chapter: Chapter,
-  images: BookImage[]
+  images: BookImage[],
+  book?: Book
 ): Promise<GeneratedLayout> {
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true })
 
   const plainText = chapter.content.replace(/<[^>]+>/g, '').trim()
+  const stylePreset = book?.stylePreset ?? chapter.stylePreset ?? 'auto'
+  const presetInstruction = STYLE_PRESET_INSTRUCTIONS[stylePreset] ?? STYLE_PRESET_INSTRUCTIONS.auto
 
-  // Build content array with text + images
   const contentBlocks: Anthropic.MessageParam['content'] = []
 
   contentBlocks.push({
     type: 'text',
-    text: `You are an expert book designer and art director. Analyze this chapter and its images, then create a stunning visual layout.
+    text: `You are an expert book designer, art director, and typographer. \
+Analyze this chapter and create a breathtaking visual layout.
 
+BOOK: "${book?.title ?? 'Unknown'}" by ${book?.author ?? 'Unknown'}
+${book?.synopsis ? `SYNOPSIS: ${book.synopsis}` : ''}
 CHAPTER TITLE: "${chapter.title}"
 CHAPTER ACCENT COLOR: ${chapter.accentColor}
+STYLE PRESET: ${stylePreset}
+STYLE DIRECTION: ${presetInstruction}
 
 CHAPTER TEXT:
 ${plainText}
 
-${images.length > 0 ? `There are ${images.length} image(s) included. Analyze their visual content, mood, and how they relate to the text.` : 'No images provided — create a typography-focused layout.'}
+${images.length > 0 ? `There are ${images.length} image(s). Analyze their mood and relationship to the text.` : 'No images — create a powerful typography-focused layout.'}
 
-Return a JSON object (no markdown, pure JSON) with this exact structure:
+Return a JSON object (no markdown, pure JSON) with this EXACT structure:
 {
-  "style": "one of: cinematic, editorial, literary, mystical, minimalist, graphic, vintage",
-  "accentColor": "a hex color that fits the mood (can keep ${chapter.accentColor} or suggest better)",
-  "backgroundStyle": "describe a CSS background (e.g., 'linear-gradient(135deg, #0a0a1a, #1a0a2e)' or 'radial-gradient...')",
-  "fontPairing": "heading font description and body font description",
-  "designNotes": "2 sentences describing the visual concept",
+  "style": "one of: cinematic, editorial, literary, mystical, minimalist, graphic, vintage, bloom-hour, terminal-arcane",
+  "accentColor": "hex color that fits the mood",
+  "backgroundStyle": "CSS background string (e.g., 'radial-gradient(ellipse at 20% 20%, #1a0010, #050508)')",
+  "fontPairing": "heading font + body font description",
+  "designNotes": "2-3 sentences describing the visual concept",
   "sections": [
-    // Order the content thoughtfully. Available section types:
-    // { "type": "title", "content": "chapter title text" }
-    // { "type": "dropcap", "content": "first paragraph text (starts with big decorative letter)" }
-    // { "type": "body", "content": "paragraph text" }
-    // { "type": "pullquote", "content": "a powerful 10-20 word quote extracted from the text" }
-    // { "type": "image", "imageId": "use the id provided", "imageUrl": "copy the url", "caption": "evocative caption", "alignment": "left|center|right|full", "widthPercent": 40-100 }
-    // { "type": "subheading", "content": "section break heading" }
-    // { "type": "divider", "style": "ornamental|line|stars" }
+    // TYPOGRAPHY sections:
+    { "type": "title", "content": "chapter title" },
+    { "type": "subtitle", "content": "✦ I — THE BLEEDING HOUR ✦", "style": "ornate" },
+    { "type": "epigraph", "content": "opening quote or lyric" },
+    { "type": "dropcap", "content": "first paragraph — starts with big decorative letter" },
+    { "type": "body", "content": "regular paragraph prose" },
+    { "type": "pullquote", "content": "10-20 word power quote extracted from text" },
+    { "type": "subheading", "content": "section break heading" },
+
+    // POETIC/FRAGMENTED sections:
+    { "type": "poetry", "content": "verse with line breaks using \\n — lyrical passages" },
+    { "type": "fragment", "content": "single powerful line — stands alone with dramatic whitespace", "emphasis": "medium" },
+    { "type": "scream", "content": "THE LOUDEST LINE — displayed large and urgent" },
+    { "type": "whisper", "content": "quiet sacred aside — small, dim, intimate annotation" },
+
+    // SPECIAL sections:
+    { "type": "dialogue", "content": "a line of speech", "speaker": "CHARACTER NAME" },
+    { "type": "aria_data", "content": "SYSTEM ANALYSIS:\\nword_count: 847\\nrecurring_sigils: ✦ (12)\\ntheme_density: critical" },
+    { "type": "wordsplit", "word": "BELIEVE", "content": "BE | LIE | VE", "roots": "Old English: be (to be) + leogan (to lie) + life (to live)" },
+    { "type": "letter", "content": "Text formatted as a handwritten letter or personal note" },
+    { "type": "spell", "content": "ritual incantation text — sacred, mysterious, charged with power" },
+    { "type": "etymology", "word": "NEMO", "content": "NEMO = NO ONE = OMEN reversed", "roots": "Latin: nemo (nobody, no man)" },
+
+    // ORNAMENTAL sections:
+    { "type": "sigil_row", "glyphs": ["✦", "🩸", "🌕", "⚡", "◈"] },
+    { "type": "divider", "style": "ornamental" },
+
+    // IMAGE sections:
+    { "type": "image", "imageId": "use the provided id", "imageUrl": "copy the url", "caption": "evocative caption", "alignment": "left|center|right|full", "widthPercent": 40-100 }
   ]
 }
 
-Be creative and bold. Interweave images with text in unexpected ways. Extract the most powerful lines as pull quotes. Break the text into natural sections with subheadings if it helps. Think like a high-end book designer.`,
+DESIGN PHILOSOPHY:
+- Think like an art director for a limited-edition literary press
+- Mix section types dynamically — avoid chaining plain body paragraphs
+- Isolate the most powerful individual lines as FRAGMENT sections
+- Use ARIA_DATA for clinical/analytical/data-driven moments in the text
+- Use WORDSPLIT for words that deserve etymological attention
+- Use POETRY for lyrical, verse-like, rhythmically significant passages
+- Extract 1-3 most quotable lines as PULLQUOTE
+- Use SCREAM sparingly — only for absolute peak intensity
+- SIGIL_ROW glyphs should thematically match the chapter content
+- Interweave images between text sections organically
+- Be bold, unexpected, and make this a book worth holding.`,
   })
 
-  // Attach images for vision analysis
   for (const img of images) {
     const mediaType = img.dataUrl.startsWith('data:image/png')
       ? 'image/png'
@@ -78,21 +158,20 @@ Be creative and bold. Interweave images with text in unexpected ways. Extract th
       : 'image/jpeg'
 
     const base64 = img.dataUrl.split(',')[1]
-
     contentBlocks.push({
       type: 'image',
       source: { type: 'base64', media_type: mediaType, data: base64 },
     })
-
     contentBlocks.push({
       type: 'text',
-      text: `[Above image ID: "${img.id}", filename: "${img.name}"]`,
+      text: `[Image ID: "${img.id}", filename: "${img.name}"]`,
     })
   }
 
   const response = await client.messages.create({
-    model: 'claude-opus-4-6',
-    max_tokens: 4096,
+    model: 'claude-opus-4-7',
+    max_tokens: 8192,
+    thinking: { type: 'adaptive' },
     messages: [{ role: 'user', content: contentBlocks }],
   })
 
@@ -102,13 +181,12 @@ Be creative and bold. Interweave images with text in unexpected ways. Extract th
   try {
     return JSON.parse(cleaned) as GeneratedLayout
   } catch {
-    // Fallback layout if JSON parse fails
     const paragraphs = plainText.split(/\n\n+/).filter(Boolean)
     return {
       style: 'literary',
       accentColor: chapter.accentColor,
       backgroundStyle: 'linear-gradient(135deg, #080810, #0d0d20)',
-      fontPairing: 'Serif heading, readable body',
+      fontPairing: 'Georgia heading, readable body',
       designNotes: 'Clean literary layout with careful typography.',
       sections: [
         { type: 'title', content: chapter.title },

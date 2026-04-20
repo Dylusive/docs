@@ -5,6 +5,9 @@ import { useStore } from '../store/bookStore'
 import { MainFrame } from '../components/layout/MainFrame'
 import { HolographicCard } from '../components/ui/HolographicCard'
 import { GlowButton } from '../components/ui/GlowButton'
+import { buildChapterLayout } from '../api/ariaLayout'
+import type { GeneratedLayout } from '../api/ariaLayout'
+import { ChapterPreview } from '../components/editor/ChapterPreview'
 
 const ACCENT_PRESETS = [
   '#00e5ff', '#8b5cf6', '#ffd700', '#10b981', '#f59e0b',
@@ -148,6 +151,43 @@ export function ChapterView() {
   const editorRef = useRef<HTMLDivElement>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout>>()
   const [showImagePicker, setShowImagePicker] = useState(false)
+  const [previewMode, setPreviewMode] = useState(false)
+  const [generatedLayout, setGeneratedLayout] = useState<GeneratedLayout | null>(null)
+  const [buildingLayout, setBuildingLayout] = useState(false)
+  const [layoutError, setLayoutError] = useState('')
+
+  const handleBuildLayout = async () => {
+    if (!chapter || buildingLayout) return
+    const { apiKey } = useStore.getState()
+    if (!apiKey) { setLayoutError('No API key — add it in ⚙ settings'); return }
+
+    setBuildingLayout(true)
+    setLayoutError('')
+
+    // Gather all images placed in this chapter
+    const { getImage } = useStore.getState()
+    const images = chapter.placedImages
+      .map((p) => getImage(p.imageId))
+      .filter(Boolean) as import('../types').BookImage[]
+
+    try {
+      const layout = await buildChapterLayout(apiKey, chapter, images)
+      // Attach imageUrls for placed images
+      layout.sections = layout.sections.map((s) => {
+        if (s.type === 'image' && s.imageId) {
+          const img = getImage(s.imageId)
+          return { ...s, imageUrl: img?.dataUrl ?? s.imageUrl }
+        }
+        return s
+      })
+      setGeneratedLayout(layout)
+      setPreviewMode(true)
+    } catch (err) {
+      setLayoutError(err instanceof Error ? err.message : 'Layout generation failed')
+    } finally {
+      setBuildingLayout(false)
+    }
+  }
 
   useEffect(() => {
     if (editorRef.current && chapter) {
@@ -274,6 +314,55 @@ export function ChapterView() {
               </div>
 
               <div className="ml-auto flex items-center gap-2">
+                {/* Edit / Preview toggle */}
+                <div className="flex rounded overflow-hidden border" style={{ borderColor: 'rgba(0,229,255,0.2)' }}>
+                  <button
+                    onClick={() => setPreviewMode(false)}
+                    className="px-3 py-1.5 text-xs font-mono transition-all"
+                    style={{
+                      background: !previewMode ? 'rgba(0,229,255,0.15)' : 'transparent',
+                      color: !previewMode ? '#00e5ff' : 'rgba(255,255,255,0.3)',
+                    }}
+                  >
+                    ✎ Edit
+                  </button>
+                  <button
+                    onClick={() => previewMode ? setPreviewMode(false) : generatedLayout ? setPreviewMode(true) : undefined}
+                    className="px-3 py-1.5 text-xs font-mono transition-all"
+                    style={{
+                      background: previewMode ? 'rgba(0,229,255,0.15)' : 'transparent',
+                      color: previewMode ? '#00e5ff' : generatedLayout ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
+                      cursor: generatedLayout ? 'pointer' : 'default',
+                    }}
+                  >
+                    ◻ Preview
+                  </button>
+                </div>
+
+                {/* AI Layout button */}
+                <motion.button
+                  whileHover={{ scale: buildingLayout ? 1 : 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleBuildLayout}
+                  disabled={buildingLayout}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all"
+                  style={{
+                    background: buildingLayout ? 'rgba(255,215,0,0.05)' : 'rgba(255,215,0,0.1)',
+                    border: '1px solid rgba(255,215,0,0.3)',
+                    color: buildingLayout ? 'rgba(255,215,0,0.4)' : '#ffd700',
+                    boxShadow: buildingLayout ? 'none' : '0 0 12px rgba(255,215,0,0.2)',
+                  }}
+                >
+                  {buildingLayout ? (
+                    <>
+                      <motion.span animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}>✦</motion.span>
+                      Building...
+                    </>
+                  ) : (
+                    <>✦ AI Build Layout</>
+                  )}
+                </motion.button>
+
                 <GlowButton
                   size="sm"
                   variant="ghost"
@@ -291,6 +380,13 @@ export function ChapterView() {
                   Delete
                 </GlowButton>
               </div>
+
+              {/* Error message */}
+              {layoutError && (
+                <div className="mt-2 text-xs font-mono px-2 py-1 rounded" style={{ color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                  ⚠ {layoutError}
+                </div>
+              )}
             </div>
 
             <input
@@ -305,40 +401,60 @@ export function ChapterView() {
           {/* Divider */}
           <div className="flex-shrink-0 mx-6 h-px" style={{ background: `linear-gradient(90deg, ${chapter.accentColor}44, transparent)` }} />
 
-          {/* Editor */}
-          <HolographicCard
-            glowColor={chapter.accentColor}
-            className="flex-1 mx-6 my-4 flex flex-col overflow-hidden"
-            padding="p-0"
-          >
-            <RichTextToolbar onFormat={handleFormat} accentColor={chapter.accentColor} />
+          {/* Editor or Preview */}
+          <AnimatePresence mode="wait">
+            {previewMode && generatedLayout ? (
+              <motion.div
+                key="preview"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex-1 mx-6 my-4 rounded-lg overflow-hidden"
+                style={{ border: `1px solid ${chapter.accentColor}22` }}
+              >
+                <ChapterPreview layout={generatedLayout} chapterNumber={chapter.order + 1} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="editor"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex-1 mx-6 my-4 flex flex-col overflow-hidden"
+              >
+                <HolographicCard
+                  glowColor={chapter.accentColor}
+                  className="flex-1 flex flex-col overflow-hidden"
+                  padding="p-0"
+                >
+                  <RichTextToolbar onFormat={handleFormat} accentColor={chapter.accentColor} />
 
-            <div className="flex-1 overflow-y-auto p-6">
-              {/* Placed images at top */}
-              {chapter.placedImages.length > 0 && (
-                <div className="mb-4">
-                  {chapter.placedImages.map((p) => (
-                    <PlacedImageBlock key={p.id} placedId={p.id} chapterId={chapter.id} accentColor={chapter.accentColor} />
-                  ))}
-                </div>
-              )}
-
-              {/* Rich text area */}
-              <div
-                ref={editorRef}
-                contentEditable
-                suppressContentEditableWarning
-                onInput={handleInput}
-                className="min-h-full outline-none leading-relaxed text-sm"
-                style={{
-                  color: 'rgba(255,255,255,0.85)',
-                  fontFamily: 'Inter, sans-serif',
-                  caretColor: chapter.accentColor,
-                }}
-                data-placeholder="Begin writing your chapter here..."
-              />
-            </div>
-          </HolographicCard>
+                  <div className="flex-1 overflow-y-auto p-6">
+                    {chapter.placedImages.length > 0 && (
+                      <div className="mb-4">
+                        {chapter.placedImages.map((p) => (
+                          <PlacedImageBlock key={p.id} placedId={p.id} chapterId={chapter.id} accentColor={chapter.accentColor} />
+                        ))}
+                      </div>
+                    )}
+                    <div
+                      ref={editorRef}
+                      contentEditable
+                      suppressContentEditableWarning
+                      onInput={handleInput}
+                      className="min-h-full outline-none leading-relaxed text-sm"
+                      style={{
+                        color: 'rgba(255,255,255,0.85)',
+                        fontFamily: 'Inter, sans-serif',
+                        caretColor: chapter.accentColor,
+                      }}
+                      data-placeholder="Begin writing your chapter here..."
+                    />
+                  </div>
+                </HolographicCard>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Word count */}
           <div className="flex-shrink-0 px-6 pb-2 flex items-center justify-between">

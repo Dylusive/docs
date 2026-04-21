@@ -204,3 +204,102 @@ DESIGN PHILOSOPHY:
     }
   }
 }
+
+export function buildMockLayout(chapter: Chapter, images: BookImage[]): GeneratedLayout {
+  const plainText = chapter.content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const rawParas = plainText.split(/(?<=[.!?])\s{2,}|(?<=\n)\n/).map((p) => p.trim()).filter((p) => p.length > 10)
+
+  // Fall back to splitting on sentences if paragraphs are sparse
+  const paras = rawParas.length < 2
+    ? plainText.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter((s) => s.length > 20)
+    : rawParas
+
+  const sections: LayoutSection[] = []
+
+  // Title
+  sections.push({ type: 'title', content: chapter.title })
+
+  // Subtitle ornament
+  sections.push({
+    type: 'subtitle',
+    content: '✦  I  —  THE BLOOM HOUR  —  ✦',
+    style: 'ornate',
+  })
+
+  // Opening sigils
+  sections.push({ type: 'sigil_row', glyphs: ['✦', '🩸', '🌕', '◈', '∴'] })
+
+  // First paragraph as dropcap
+  if (paras[0]) sections.push({ type: 'dropcap', content: paras[0] })
+
+  // Walk remaining paragraphs and classify them
+  for (let i = 1; i < paras.length; i++) {
+    const p = paras[i]
+    const wordCount = p.split(/\s+/).length
+    const isDialogue = p.startsWith('"') || p.startsWith('“')
+    const isShort = wordCount <= 12
+    const isMedium = wordCount > 12 && wordCount <= 30
+
+    if (isDialogue) {
+      // Extract a speaker guess from surrounding text or default
+      sections.push({ type: 'dialogue', content: p, speaker: '—' })
+    } else if (isShort && i % 3 === 0) {
+      sections.push({ type: 'fragment', content: p, emphasis: 'high' })
+    } else if (isMedium && i % 4 === 1) {
+      sections.push({ type: 'pullquote', content: p })
+    } else {
+      sections.push({ type: 'body', content: p })
+    }
+
+    // Inject an image after roughly 1/3 through
+    if (images.length > 0 && i === Math.floor(paras.length / 3)) {
+      sections.push({
+        type: 'image',
+        imageId: images[0].id,
+        imageUrl: images[0].dataUrl,
+        caption: images[0].name,
+        alignment: 'center',
+        widthPercent: 85,
+      })
+    }
+
+    // Second image at 2/3
+    if (images.length > 1 && i === Math.floor((paras.length * 2) / 3)) {
+      sections.push({
+        type: 'image',
+        imageId: images[1].id,
+        imageUrl: images[1].dataUrl,
+        caption: images[1].name,
+        alignment: 'right',
+        widthPercent: 60,
+      })
+    }
+
+    // Mid-chapter sigil break
+    if (i === Math.floor(paras.length / 2)) {
+      sections.push({ type: 'sigil_row', glyphs: ['🩸', '∴', '🌕'] })
+    }
+  }
+
+  // Closing whisper
+  const lastLine = paras[paras.length - 1]
+  if (lastLine && lastLine.split(/\s+/).length <= 20) {
+    // Replace the last body with a whisper for impact
+    const last = sections[sections.length - 1]
+    if (last?.type === 'body') sections.pop()
+    sections.push({ type: 'whisper', content: lastLine })
+  }
+
+  // Final sigil
+  sections.push({ type: 'divider', style: 'ornamental' })
+
+  return {
+    style: 'bloom-hour',
+    accentColor: '#dc143c',
+    backgroundStyle: 'radial-gradient(ellipse at 30% 20%, #1a0008 0%, #050508 70%)',
+    fontPairing: 'Playfair Display + Georgia',
+    designNotes:
+      'Demo layout — Bloom Hour aesthetic. Blood-moon crimson, void-black, sacred-profane typography. Add your API key to let Aria generate a fully custom layout tailored to your exact prose.',
+    sections,
+  }
+}

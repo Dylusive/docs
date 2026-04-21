@@ -5,7 +5,7 @@ import { useStore, useActiveBook } from '../store/bookStore'
 import { MainFrame } from '../components/layout/MainFrame'
 import { HolographicCard } from '../components/ui/HolographicCard'
 import { GlowButton } from '../components/ui/GlowButton'
-import { buildChapterLayout } from '../api/ariaLayout'
+import { buildChapterLayout, buildMockLayout } from '../api/ariaLayout'
 import type { GeneratedLayout } from '../api/ariaLayout'
 import { ChapterPreview } from '../components/editor/ChapterPreview'
 import { AriaRewrite } from '../components/editor/AriaRewrite'
@@ -162,6 +162,17 @@ export function ChapterView() {
   const [selectedText, setSelectedText] = useState('')
   const [ariaRewriteOpen, setAriaRewriteOpen] = useState(false)
   const [showOracle, setShowOracle] = useState(false)
+
+  const handleDemoLayout = () => {
+    if (!chapter) return
+    const { getImage } = useStore.getState()
+    const images = chapter.placedImages
+      .map((p) => getImage(p.imageId))
+      .filter(Boolean) as import('../types').BookImage[]
+    const layout = buildMockLayout(chapter, images)
+    setGeneratedLayout(layout)
+    setPreviewMode(true)
+  }
 
   const handleBuildLayout = async () => {
     if (!chapter || buildingLayout) return
@@ -425,18 +436,36 @@ export function ChapterView() {
                   </button>
                 </div>
 
+                {/* Demo Layout button (no API key needed) */}
+                {!apiKey && (
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleDemoLayout}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all"
+                    style={{
+                      background: 'rgba(220,20,60,0.12)',
+                      border: '1px solid rgba(220,20,60,0.4)',
+                      color: '#dc143c',
+                      boxShadow: '0 0 12px rgba(220,20,60,0.15)',
+                    }}
+                  >
+                    🩸 Demo Layout
+                  </motion.button>
+                )}
+
                 {/* AI Layout button */}
                 <motion.button
                   whileHover={{ scale: buildingLayout ? 1 : 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={handleBuildLayout}
-                  disabled={buildingLayout}
+                  disabled={buildingLayout || !apiKey}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all"
                   style={{
-                    background: buildingLayout ? 'rgba(255,215,0,0.05)' : 'rgba(255,215,0,0.1)',
+                    background: buildingLayout ? 'rgba(255,215,0,0.05)' : apiKey ? 'rgba(255,215,0,0.1)' : 'rgba(255,215,0,0.03)',
                     border: '1px solid rgba(255,215,0,0.3)',
-                    color: buildingLayout ? 'rgba(255,215,0,0.4)' : '#ffd700',
-                    boxShadow: buildingLayout ? 'none' : '0 0 12px rgba(255,215,0,0.2)',
+                    color: buildingLayout || !apiKey ? 'rgba(255,215,0,0.3)' : '#ffd700',
+                    boxShadow: buildingLayout || !apiKey ? 'none' : '0 0 12px rgba(255,215,0,0.2)',
                   }}
                 >
                   {buildingLayout ? (

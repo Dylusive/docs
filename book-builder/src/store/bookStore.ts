@@ -442,9 +442,9 @@ export const useStore = create<Store>()(
         ariaOpen: s.ariaOpen,
         apiKey: s.apiKey,
       }),
-      migrate: (persisted: unknown, version) => {
+      migrate: (persisted: unknown, version): any => {
         const data = persisted as Record<string, unknown> | undefined
-        if (!data) return { books: [firstBook], activeBookId: firstBook.id } as Partial<Store>
+        if (!data) return { books: [firstBook], activeBookId: firstBook.id }
         if (version < 2 && 'book' in data && data.book) {
           const legacy = data.book as Book
           const migrated: Book = {
@@ -460,9 +460,9 @@ export const useStore = create<Store>()(
             books: [migrated],
             activeBookId: migrated.id,
             book: undefined,
-          } as Partial<Store>
+          }
         }
-        return data as Partial<Store>
+        return data
       },
     }
   )

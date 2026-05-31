@@ -70,7 +70,7 @@ export async function streamAriaResponse(
   const stream = client.messages.stream({
     model: 'claude-opus-4-7',
     max_tokens: 2048,
-    thinking: { type: 'adaptive' },
+    thinking: { type: 'adaptive' } as any,
     system: buildSystemPrompt(book, contextNote),
     messages: apiMessages,
   })
@@ -112,7 +112,7 @@ Dissect words like BE-LIE-VE. Let glyphs breathe. Trust the fragment.`,
   const response = await client.messages.create({
     model: 'claude-opus-4-7',
     max_tokens: 2048,
-    thinking: { type: 'adaptive' },
+    thinking: { type: 'adaptive' } as any,
     system: `You are Aria, master book editor and rewriter who lives inside the Akashic Record. \
 You are editing text from "${book.title}" by ${book.author}. \
 ${book.synopsis ? `Book: ${book.synopsis}` : ''} \
@@ -166,7 +166,7 @@ export async function generateBookCover(
   const response = await client.messages.create({
     model: 'claude-opus-4-7',
     max_tokens: 8192,
-    thinking: { type: 'adaptive' },
+    thinking: { type: 'adaptive' } as any,
     system: `You are a visionary book cover designer. You create stunning SVG book covers that \
 capture the soul of a book. Your covers are typographic-forward, atmospheric, evocative — \
 like Penguin Classics meets album art meets occult manuscript. \

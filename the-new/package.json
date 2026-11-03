@@ -1,0 +1,22 @@
+{
+  "name": "the-new",
+  "version": "1.0.0",
+  "description": "THE NEW — a 48s deterministic film written in code",
+  "scripts": {
+    "stills": "node render.mjs stills",
+    "frames": "node render.mjs frames",
+    "picture": "node render.mjs video 3",
+    "score": "node audio/score.mjs",
+    "mux": "ffmpeg -y -i build/picture.mp4 -i build/score.wav -map 0:v -map 1:a -c:v copy -c:a aac -b:a 256k -ar 48000 -t 48 -movflags +faststart THE_NEW.mp4",
+    "render": "npm run score && npm run picture && npm run mux",
+    "preview": "node serve.mjs"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "@fontsource/instrument-serif": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
+    "three": "^0.170.0"
+  },
+  "type": "module"
+}

@@ -130,6 +130,24 @@ The process: (a) render one mid-scene still per scene, (b) critique each against
 
 ---
 
+## Delivery (verified)
+
+| | |
+|---|---|
+| `THE_NEW.mp4` | H.264 High (CRF 22, `-tune grain`, yuv420p) + AAC 256k / 48 kHz · 1280×720 · 30/1 fps · **1440 frames · 48.000 s** · 95 MB |
+| Picture render | 677 s wall-clock, 3 parallel Chromium workers, chunks concatenated losslessly |
+| Flash check | mean luma decoded from the final MP4: f628 = 78.1, f629 = 77.0, **f630 = 254.0**, f631 = 170.8 |
+| Audio sync | impact transient begins at sample 1,008,000 = 21.000 s = frame 630; all 139 arpeggio notes fall after 25.0 s (asserted in `score.mjs`) |
+| Determinism | the same frame rendered in two fresh browser sessions has an identical PNG hash (tested on f200, f700, f1300). Exception: if frames are requested in a *different order* within one session, the title text in scene 6 can differ by ±1/255 in ≤3 pixels, because Chromium's 2D-canvas glyph cache (Skia) rasterizes slightly differently depending on what it drew before. All geometry and shader output stayed bit-exact. |
+
+The 235 MB CRF-15 master is reproducible with `npm run render` (`build/` is gitignored).
+
+## Closing report
+
+1. The code does what a video model can't: it grows the bloom's roots from the exact crack geometry the fracture produced, makes frame 630 white and lands the impact on sample 1,008,000, and can re-render any frame identically from one seed. Every claim on screen is a running mechanism with live numbers, not a picture of one.
+2. The film is weakest in scene 5. The observers are still a *diagram* of watching (rings, sweeps, a falling error number), and it plays as the most conventional "HUD around a specimen" image in the film.
+3. With another pass I'd push scene 4: thicken lines into ribbons, let the shards visibly fly *back along the branches* so re-forming and growing are one gesture, and give the bloom a real depth-of-field pass.
+
 ## Notes and honest limits
 - **Framework skills:** no official Three.js (or HyperFrames) agent skill was available in this environment. The project follows the Three.js manual's conventions instead: `ShaderMaterial` with additive, depth-free blending for emissive layers, `DynamicDrawUsage` buffers for CPU-updated geometry, MSAA `WebGLRenderTarget(samples: 4)` in HalfFloat for HDR, and an import map pinned to `three@0.170.0`.
 - **Midpoint interpretation:** "at exactly the midpoint" was taken as the midpoint of scene 3 (21.0 s, frame 630). The film's midpoint (24.0 s) would have left the revealed line one second of screen time. The break frame is one constant (`BREAK_FRAME`), and picture, HUD, shards and score all derive from it.

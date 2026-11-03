@@ -1,41 +1,71 @@
 // Compositor: HDR scene -> bloom chain -> final pass (Voronoi shards, crack glow, haze atmosphere,
 // chromatic aberration, ACES, generated type, flash, vignette, seeded grain).
-import * as THREE from 'three';
-import { W, H, C } from './config.js';
-import { NS } from './systems/fracture.js';
+import * as THREE from 'three'
+import { W, H, C } from './config.js'
+import { NS } from './systems/fracture.js'
 
-const quadVert = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`;
+const quadVert = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }`
 
 export function createPost(renderer) {
-  const hf = { type: THREE.HalfFloatType, depthBuffer: false };
-  const sceneRT = new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: 4 });
-  const half = [new THREE.WebGLRenderTarget(W / 2, H / 2, hf), new THREE.WebGLRenderTarget(W / 2, H / 2, hf)];
-  const quarter = [new THREE.WebGLRenderTarget(W / 4, H / 4, hf), new THREE.WebGLRenderTarget(W / 4, H / 4, hf)];
-  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2));
-  const scene = new THREE.Scene(); scene.add(quad);
+  const hf = { type: THREE.HalfFloatType, depthBuffer: false }
+  const sceneRT = new THREE.WebGLRenderTarget(W, H, { type: THREE.HalfFloatType, samples: 4 })
+  const half = [
+    new THREE.WebGLRenderTarget(W / 2, H / 2, hf),
+    new THREE.WebGLRenderTarget(W / 2, H / 2, hf),
+  ]
+  const quarter = [
+    new THREE.WebGLRenderTarget(W / 4, H / 4, hf),
+    new THREE.WebGLRenderTarget(W / 4, H / 4, hf),
+  ]
+  const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1)
+  const quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2))
+  const scene = new THREE.Scene()
+  scene.add(quad)
 
-  const bright = new THREE.ShaderMaterial({ uniforms: { tIn: { value: null }, uThresh: { value: 0.55 } }, vertexShader: quadVert,
+  const bright = new THREE.ShaderMaterial({
+    uniforms: { tIn: { value: null }, uThresh: { value: 0.55 } },
+    vertexShader: quadVert,
     fragmentShader: `uniform sampler2D tIn; uniform float uThresh; varying vec2 vUv;
       void main(){ vec3 c = texture2D(tIn, vUv).rgb; float l = max(c.r,max(c.g,c.b)); float k = max(l - uThresh, 0.0); k = k*k/(k+0.4);
-        gl_FragColor = vec4(c * (k/max(l,1e-4)), 1.0);} ` });
-  const blur = new THREE.ShaderMaterial({ uniforms: { tIn: { value: null }, uDir: { value: new THREE.Vector2() } }, vertexShader: quadVert,
+        gl_FragColor = vec4(c * (k/max(l,1e-4)), 1.0);} `,
+  })
+  const blur = new THREE.ShaderMaterial({
+    uniforms: { tIn: { value: null }, uDir: { value: new THREE.Vector2() } },
+    vertexShader: quadVert,
     fragmentShader: `uniform sampler2D tIn; uniform vec2 uDir; varying vec2 vUv;
       void main(){ vec3 s = texture2D(tIn,vUv).rgb*0.2270;
         s += (texture2D(tIn,vUv+uDir*1.3846).rgb + texture2D(tIn,vUv-uDir*1.3846).rgb)*0.3162;
         s += (texture2D(tIn,vUv+uDir*3.2308).rgb + texture2D(tIn,vUv-uDir*3.2308).rgb)*0.0703;
-        gl_FragColor = vec4(s,1.0);} ` });
+        gl_FragColor = vec4(s,1.0);} `,
+  })
 
-  const sites = Array.from({ length: NS }, () => new THREE.Vector2());
+  const sites = Array.from({ length: NS }, () => new THREE.Vector2())
   const final = new THREE.ShaderMaterial({
     uniforms: {
-      tScene: { value: sceneRT.texture }, tB1: { value: half[0].texture }, tB2: { value: quarter[0].texture },
-      tText: { value: null }, tUnder: { value: null },
-      uTime: { value: 0 }, uFrame: { value: 0 }, uFlash: { value: 0 }, uShard: { value: 0 }, uFront: { value: 0 },
-      uCrack: { value: new THREE.Vector3() }, uImpact: { value: new THREE.Vector2() },
-      uSites: { value: sites }, uOff: { value: sites.map(() => new THREE.Vector2()) }, uRot: { value: new Array(NS).fill(0) }, uTint: { value: new Array(NS).fill(1) },
-      uAber: { value: 0.0015 }, uExposure: { value: 1 }, uBloom: { value: 0.9 }, uHaze: { value: 1 }, uHazeCol: { value: new THREE.Vector3(...C.ember) },
-      uGrain: { value: 0.045 }, uVig: { value: 1 }, uUnder: { value: 0 },
+      tScene: { value: sceneRT.texture },
+      tB1: { value: half[0].texture },
+      tB2: { value: quarter[0].texture },
+      tText: { value: null },
+      tUnder: { value: null },
+      uTime: { value: 0 },
+      uFrame: { value: 0 },
+      uFlash: { value: 0 },
+      uShard: { value: 0 },
+      uFront: { value: 0 },
+      uCrack: { value: new THREE.Vector3() },
+      uImpact: { value: new THREE.Vector2() },
+      uSites: { value: sites },
+      uOff: { value: sites.map(() => new THREE.Vector2()) },
+      uRot: { value: new Array(NS).fill(0) },
+      uTint: { value: new Array(NS).fill(1) },
+      uAber: { value: 0.0015 },
+      uExposure: { value: 1 },
+      uBloom: { value: 0.9 },
+      uHaze: { value: 1 },
+      uHazeCol: { value: new THREE.Vector3(...C.ember) },
+      uGrain: { value: 0.045 },
+      uVig: { value: 1 },
+      uUnder: { value: 0 },
     },
     vertexShader: quadVert,
     fragmentShader: `
@@ -109,19 +139,39 @@ export function createPost(renderer) {
         col += gr*uGrain*(0.6 + 0.4*(1.0 - dot(col, vec3(0.33))));
         gl_FragColor = vec4(clamp(col,0.0,1.0), 1.0);
       }`,
-  });
+  })
 
-  function pass(mat, target) { quad.material = mat; renderer.setRenderTarget(target); renderer.render(scene, cam); }
-  function render(world, camera) {
-    renderer.setRenderTarget(sceneRT); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(world, camera);
-    bright.uniforms.tIn.value = sceneRT.texture; pass(bright, half[0]);
-    blur.uniforms.tIn.value = half[0].texture; blur.uniforms.uDir.value.set(2 / W, 0); pass(blur, half[1]);
-    blur.uniforms.tIn.value = half[1].texture; blur.uniforms.uDir.value.set(0, 2 / H); pass(blur, half[0]);
-    blur.uniforms.tIn.value = half[0].texture; blur.uniforms.uDir.value.set(4 / W, 0); pass(blur, quarter[1]);
-    blur.uniforms.tIn.value = quarter[1].texture; blur.uniforms.uDir.value.set(0, 4 / H); pass(blur, quarter[0]);
-    blur.uniforms.tIn.value = quarter[0].texture; blur.uniforms.uDir.value.set(8 / W, 0); pass(blur, quarter[1]);
-    blur.uniforms.tIn.value = quarter[1].texture; blur.uniforms.uDir.value.set(0, 8 / H); pass(blur, quarter[0]);
-    pass(final, null);
+  function pass(mat, target) {
+    quad.material = mat
+    renderer.setRenderTarget(target)
+    renderer.render(scene, cam)
   }
-  return { render, uniforms: final.uniforms };
+  function render(world, camera) {
+    renderer.setRenderTarget(sceneRT)
+    renderer.setClearColor(0x000000, 0)
+    renderer.clear()
+    renderer.render(world, camera)
+    bright.uniforms.tIn.value = sceneRT.texture
+    pass(bright, half[0])
+    blur.uniforms.tIn.value = half[0].texture
+    blur.uniforms.uDir.value.set(2 / W, 0)
+    pass(blur, half[1])
+    blur.uniforms.tIn.value = half[1].texture
+    blur.uniforms.uDir.value.set(0, 2 / H)
+    pass(blur, half[0])
+    blur.uniforms.tIn.value = half[0].texture
+    blur.uniforms.uDir.value.set(4 / W, 0)
+    pass(blur, quarter[1])
+    blur.uniforms.tIn.value = quarter[1].texture
+    blur.uniforms.uDir.value.set(0, 4 / H)
+    pass(blur, quarter[0])
+    blur.uniforms.tIn.value = quarter[0].texture
+    blur.uniforms.uDir.value.set(8 / W, 0)
+    pass(blur, quarter[1])
+    blur.uniforms.tIn.value = quarter[1].texture
+    blur.uniforms.uDir.value.set(0, 8 / H)
+    pass(blur, quarter[0])
+    pass(final, null)
+  }
+  return { render, uniforms: final.uniforms }
 }

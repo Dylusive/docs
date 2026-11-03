@@ -1,14 +1,18 @@
 // SCENE 6 — a golden logarithmic spiral whose particles flow inward forever (log-radius wraps),
 // with concentric rings shrinking by φ each cycle: a Droste recursion that never arrives.
-import * as THREE from 'three';
-import { rng, smoothstep } from '../util.js';
-import { C } from '../config.js';
+import * as THREE from 'three'
+import { rng, smoothstep } from '../util.js'
+import { C } from '../config.js'
 
 export function createSpiral() {
-  const R = rng(606);
-  const N = 7000, p = new Float32Array(N * 3), a = [];
-  for (let i = 0; i < N; i++) a.push(R(), i % 3, R(), R());
-  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('aS', new THREE.Float32BufferAttribute(a, 4));
+  const R = rng(606)
+  const N = 7000
+  const p = new Float32Array(N * 3)
+  const a = []
+  for (let i = 0; i < N; i++) a.push(R(), i % 3, R(), R())
+  const g = new THREE.BufferGeometry()
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3))
+  g.setAttribute('aS', new THREE.Float32BufferAttribute(a, 4))
   const mat = new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 }, uFade: { value: 0 }, uScale: { value: 989 } },
     vertexShader: `attribute vec4 aS; uniform float uTime, uScale; varying float vR, vK;
@@ -29,14 +33,27 @@ export function createSpiral() {
         c = mix(c, vec3(${C.phosphor})*0.9, step(0.93, vK));
         float edge = smoothstep(0.0,0.08,vR)*(1.0-smoothstep(0.8,1.0,vR));
         gl_FragColor=vec4(c*a*edge*uFade*1.1,1.0);} `,
-    transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending,
-  });
-  const pts = new THREE.Points(g, mat); pts.frustumCulled = false;
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+  const pts = new THREE.Points(g, mat)
+  pts.frustumCulled = false
   // Droste rings
-  const rp = [], ri = [];
-  const NR = 9;
-  for (let n = 0; n < NR; n++) for (let k = 0; k < 128; k++) { const a0 = k / 128 * 6.2832, a1 = (k + 1) / 128 * 6.2832; rp.push(Math.cos(a0), Math.sin(a0), 0, Math.cos(a1), Math.sin(a1), 0); ri.push(n, n); }
-  const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3)); rg.setAttribute('aN', new THREE.Float32BufferAttribute(ri, 1));
+  const rp = []
+  const ri = []
+  const NR = 9
+  for (let n = 0; n < NR; n++)
+    for (let k = 0; k < 128; k++) {
+      const a0 = (k / 128) * 6.2832
+      const a1 = ((k + 1) / 128) * 6.2832
+      rp.push(Math.cos(a0), Math.sin(a0), 0, Math.cos(a1), Math.sin(a1), 0)
+      ri.push(n, n)
+    }
+  const rg = new THREE.BufferGeometry()
+  rg.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3))
+  rg.setAttribute('aN', new THREE.Float32BufferAttribute(ri, 1))
   const rMat = new THREE.ShaderMaterial({
     uniforms: { uTime: { value: 0 }, uFade: { value: 0 } },
     vertexShader: `attribute float aN; uniform float uTime; varying float vR;
@@ -44,22 +61,31 @@ export function createSpiral() {
         gl_Position = projectionMatrix*modelViewMatrix*vec4(position.xy*r, 0.0, 1.0);} `,
     fragmentShader: `uniform float uFade; varying float vR; void main(){ float a = smoothstep(0.0,0.12,vR)*(1.0-smoothstep(0.6,1.0,vR));
       gl_FragColor=vec4(vec3(${C.phosphor})*0.5*a*uFade,1.0);} `,
-    transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending,
-  });
-  const rings = new THREE.LineSegments(rg, rMat); rings.frustumCulled = false;
-  const group = new THREE.Group(); group.add(pts, rings);
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+  const rings = new THREE.LineSegments(rg, rMat)
+  rings.frustumCulled = false
+  const group = new THREE.Group()
+  group.add(pts, rings)
   function update(t, camera) {
-    const v = smoothstep(40.8, 42.6, t);
-    group.visible = v > 0.001; if (!group.visible) return;
+    const v = smoothstep(40.8, 42.6, t)
+    group.visible = v > 0.001
+    if (!group.visible) return
     // lives in camera space, 8 units ahead, tilting slowly so it keeps depth
-    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-    group.position.copy(camera.position).addScaledVector(fwd, 8);
-    group.quaternion.copy(camera.quaternion);
-    group.rotateX(0.18 * Math.sin(t * 0.4)); group.rotateY(0.14 * Math.cos(t * 0.33));
-    const grow = 0.25 + 0.75 * smoothstep(40.8, 43.0, t);
-    group.scale.setScalar(grow);
-    mat.uniforms.uTime.value = t; rMat.uniforms.uTime.value = t;
-    mat.uniforms.uFade.value = v; rMat.uniforms.uFade.value = v;
+    const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+    group.position.copy(camera.position).addScaledVector(fwd, 8)
+    group.quaternion.copy(camera.quaternion)
+    group.rotateX(0.18 * Math.sin(t * 0.4))
+    group.rotateY(0.14 * Math.cos(t * 0.33))
+    const grow = 0.25 + 0.75 * smoothstep(40.8, 43.0, t)
+    group.scale.setScalar(grow)
+    mat.uniforms.uTime.value = t
+    rMat.uniforms.uTime.value = t
+    mat.uniforms.uFade.value = v
+    rMat.uniforms.uFade.value = v
   }
-  return { object: group, update };
+  return { object: group, update }
 }

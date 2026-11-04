@@ -9,6 +9,7 @@ import versionSatisfiesRange from '../lib/version-satisfies-range.js'
 import isArchivedVersion from '../lib/is-archived-version.js'
 import got from 'got'
 import readJsonFile from '../lib/read-json-file.js'
+import getArchivedVersionUrl from '../lib/get-archived-version-url.js'
 const archivedRedirects = readJsonFile(
   './lib/redirects/static/archived-redirects-from-213-to-217.json'
 )
@@ -17,7 +18,7 @@ const archivedFrontmatterFallbacks = readJsonFile(
 )
 
 // This module handles requests for deprecated GitHub Enterprise versions
-// by routing them to static content in help-docs-archived-enterprise-versions
+// by routing them to static content in the per-version docs-ghes-<version> archives
 
 export default async function archivedEnterpriseVersions(req, res, next) {
   const { isArchived, requestedVersion } = isArchivedVersion(req)
@@ -96,7 +97,7 @@ function getProxyPath(reqPath, requestedVersion) {
     ? slash(path.join('/', requestedVersion, reqPath))
     : reqPath.replace(/^\/enterprise/, '')
 
-  return `https://github.github.com/help-docs-archived-enterprise-versions${proxyPath}`
+  return getArchivedVersionUrl(proxyPath)
 }
 
 // from 2.13 to 2.17, we lost access to frontmatter redirects during the archival process

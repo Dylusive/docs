@@ -4,10 +4,10 @@
 // can be added it this list.
 
 export default [
-  'actions/checkout@1e204e9a9253d643386038d443f96446fa156a97', // v2.3.5
+  'actions/checkout@11d5960a326750d5838078e36cf38b85af677262', // v4.4.0
   'actions/github-script@2b34a689ec86a68d8ab9478298f91d5401337b7d', // v4.0.2
   'actions/labeler@5f867a63be70efff62b767459b009290364495eb', // v2.2.0
-  'actions/setup-node@270253e841af726300e85d718a5f606959b2903c', // v2.4.1
+  'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020', // v4.4.0
   'actions/stale@cdf15f641adb27a71842045a94023bef6945e3aa', // v4.0.0
   'actions/upload-artifact@27121b0bdffd731efa15d66772be8dc71245d074', // v2.2.4
   'alex-page/github-project-automation-plus@bb266ff4dde9242060e2d5418e120a133586d488', // v0.8.1

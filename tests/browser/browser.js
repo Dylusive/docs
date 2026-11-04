@@ -17,6 +17,16 @@ describe('homepage', () => {
 describe('browser search', () => {
   jest.setTimeout(60 * 1000)
 
+  // Some tests below open their own tab with browser.newPage(). Close those afterwards and
+  // bring the shared `page` back to the front: a background tab gets no requestAnimationFrame,
+  // which Puppeteer's waitForSelector polls on by default, so every later test would hang.
+  afterEach(async () => {
+    for (const openPage of await browser.pages()) {
+      if (openPage !== page) await openPage.close()
+    }
+    await page.bringToFront()
+  })
+
   it('works on the homepage', async () => {
     await page.goto('http://localhost:4001/en')
     await page.click('[data-testid=site-search-input]')

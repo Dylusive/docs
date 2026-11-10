@@ -135,9 +135,13 @@
 
 /* drop cap */
 .gb-content p.gb-dropcap { text-indent: 0; }
+.gb-content p.gb-dropcap { --gb-dcfs: calc(((var(--gb-dc) - 1) * var(--gb-lh) + 0.68) / 0.68); }
+/* The capital is sized so its cap-height spans exactly N lines: top level with the first line's capitals,
+   foot on the Nth baseline. Its float box is a hair under N lines so line N+1 runs full width. */
 .gb-content p.gb-dropcap:not(.gb-split-tail)::first-letter {
   float: left; font-family: var(--gb-chapter-font); font-style: normal; font-weight: 400;
-  font-size: calc(var(--gb-dc) * var(--gb-lh) * 0.9em); line-height: 0.8; padding: 0.06em 0.08em 0 0; color: var(--gb-accent);
+  font-size: calc(var(--gb-dcfs) * 1em); line-height: calc((var(--gb-dc) * var(--gb-lh) - 0.3) / var(--gb-dcfs));
+  padding: 0.025em 0.07em 0 0; color: var(--gb-accent);
 }
 
 /* page-slice bookkeeping */

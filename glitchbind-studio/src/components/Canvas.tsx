@@ -11,6 +11,7 @@ import { isImageFile } from '@/lib/images'
 import { clamp } from '@/lib/units'
 import { BookPage } from './BookPage'
 import { FigureOverlay } from './FigureOverlay'
+import { SelectionOverlay } from './SelectionOverlay'
 
 export const ZOOM_MIN = 0.5
 export const ZOOM_MAX = 2
@@ -237,6 +238,7 @@ export function Canvas() {
           <div ref={windowEl} className="gb-live-window" style={liveStyle}>
             <div ref={mover} className="gb-live-mover" style={{ top: liveSeg ? -liveSeg.y0 : 0 }} />
           </div>
+          <SelectionOverlay metrics={metrics} geo={geo} mirrored={mirrored} />
           <FigureOverlay zoom={zoom} />
         </div>
       </div>

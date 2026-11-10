@@ -9,6 +9,7 @@ import { editorCtx } from '@/lib/editor/extensions'
 import { invalidateLayout, scheduleLayout } from '@/lib/layoutManager'
 import { clamp } from '@/lib/units'
 import { countDocWords } from '@/lib/wordcount'
+import { getPref, setPref } from '@/lib/storage'
 import '@/lib/actions'
 import { TopBar, saveProjectFile } from './TopBar'
 import { FormatBar } from './FormatBar'
@@ -46,12 +47,24 @@ export default function Studio({ id }: { id: string }) {
       if (!ok) { setMissing(true); return }
       const p = useProject.getState().project
       invalidateLayout()
-      const first = p?.sections.find((s) => s.kind === 'chapter') ?? p?.sections.find((s) => s.doc)
-      controller.activate(first?.id ?? null)
-      useUI.setState({ tab: 'book', proof: false, dialog: null, focusMode: false, livePage: -1 })
+      // reopen where the author left off; a book opened for the first time starts at its first page
+      const last = await getPref<{ sectionId: string; page: number }>(`last:${id}`)
+      const start = p?.sections.find((s) => s.id === last?.sectionId) ?? p?.sections[0]
+      useUI.setState({ tab: 'book', proof: false, dialog: null, focusMode: false, livePage: -1, currentPage: 0, rightTab: 'context' })
+      controller.activate(start?.id ?? null)
+      if (last && start?.id === last.sectionId) {
+        const stop = useLayout.subscribe((l) => { if (l.ready) { stop(); requestAnimationFrame(() => canvasBridge.revealPage(Math.min(last.page, l.pages.length - 1))) } })
+      }
     })()
     return () => { live = false; void useProject.getState().close(); controller.reset() }
   }, [id])
+
+  // remember the reading position for next time
+  useEffect(() => {
+    if (!project || !ui.activeSectionId) return
+    const t = setTimeout(() => void setPref(`last:${id}`, { sectionId: ui.activeSectionId, page: ui.currentPage }), 600)
+    return () => clearTimeout(t)
+  }, [id, project?.id, ui.activeSectionId, ui.currentPage]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // re-run pagination when anything about the book changes
   useEffect(() => { if (project) scheduleLayout() }, [project])

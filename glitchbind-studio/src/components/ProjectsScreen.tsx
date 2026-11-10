@@ -39,7 +39,8 @@ function CoverThumb({ p }: { p: ProjectSummary }) {
   return (
     <div className="relative w-full aspect-[2/3] rounded-[3px] overflow-hidden shadow-page transition-transform duration-200 ease-out group-hover:-translate-y-1" style={{ background: p.coverBg }}>
       {img && <img src={img} alt="" className="absolute inset-0 w-full h-full object-cover" />}
-      <div className="absolute inset-y-0 left-0 w-[5px] bg-black/25" />
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'linear-gradient(105deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,0) 38%)', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.09)' }} />
+      <div className="absolute inset-y-0 left-0 w-[6px] pointer-events-none" style={{ background: 'linear-gradient(90deg, rgba(0,0,0,.45), rgba(0,0,0,0))', borderRight: '1px solid rgba(255,255,255,.05)' }} />
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-5">
         <div className="w-6 h-px mb-4" style={{ background: p.coverAccent }} />
         <div className="leading-[1.15] text-[17px]" style={{ color: p.coverText, fontFamily: fontStack(p.coverFont) }}>{p.title}</div>

@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import JSZip from 'jszip'
-import { caretInto, collectErrors, histogram, makePng, openDemo, openSection, pageCount, ready, reveal, settle } from './helpers'
+import { caretInto, collectErrors, histogram, makePng, openDemo, openSection, pageCount, ready, reveal, settle, frame } from './helpers'
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'glitchbind-e2e-'))
 const state = (page: Page) => page.evaluate(() => {
@@ -89,6 +89,25 @@ test.describe('acceptance', () => {
   test('typing repaginates live; a trim change repaginates the whole book', async ({ page }) => {
     const log = collectErrors(page)
     await openDemo(page)
+    // keyboard navigation crosses real page boundaries: the live editor follows the caret from page to page
+    await openSection(page, 'The Keeper of Dead Air')
+    await page.evaluate(() => { const c = window.__gb!.controller; c.select(2); c.focus() })
+    const startPage = await page.evaluate(() => window.__gb!.controller.caretPage())
+    let moved = startPage
+    for (let i = 0; i < 60 && moved === startPage; i++) { await page.keyboard.press('ArrowDown'); await frame(page); moved = await page.evaluate(() => window.__gb!.controller.caretPage()) }
+    expect(moved).toBe(startPage + 1)
+    await expect.poll(() => page.evaluate(() => window.__gb!.ui.getState().livePage)).toBe(startPage + 1)
+    await page.keyboard.type('Typed on the second page. ', { delay: 0 })
+    expect(await page.locator(`.gb-page[data-page-index="${startPage + 1}"][data-live="true"]`).count()).toBe(1)
+    // select back across the page boundary: the part on the other page is painted too
+    for (let i = 0; i < 6; i++) { await page.keyboard.press('Shift+ArrowUp'); await frame(page) }
+    await settle(page, 250)
+    const selPages = await page.evaluate(() => { const g = window.__gb!; const s = g.controller.view!.state.selection; return [g.controller.pageOfPos(s.from), g.controller.pageOfPos(s.to)] })
+    expect(selPages[0]).toBe(startPage)
+    expect(selPages[1]).toBe(startPage + 1)
+    expect(await page.locator('.gb-sel-rect').count()).toBeGreaterThan(0)
+    await page.keyboard.press('ArrowRight')
+
     await openSection(page, 'The Answer')
     const before = await state(page)
     /** where each chapter's first page ends — changes whenever its lines are re-broken */

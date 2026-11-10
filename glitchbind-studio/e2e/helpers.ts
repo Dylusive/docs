@@ -86,3 +86,6 @@ export async function reveal(page: Page, index: number): Promise<void> {
   await page.locator(`.gb-page[data-page-index="${index}"]`).waitFor()
   await page.waitForTimeout(150)
 }
+
+/** Let the browser run a rendering frame (headless Chrome only delivers selectionchange with frames). */
+export const frame = (page: Page): Promise<void> => page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))))

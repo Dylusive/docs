@@ -228,8 +228,7 @@ export function CoverBuilder() {
             <button type="button" className="gb-btn-ghost" onPointerDown={(e) => e.stopPropagation()} onClick={() => mutateCover((items) => [...items, { id: uid('c_'), type: 'barcode', panel: 'back', x: round(g.spineX - 0.25 - BARCODE_W, 4), y: round(g.bleed + g.trimH - 0.25 - BARCODE_H, 4), w: BARCODE_W, h: BARCODE_H, rotation: 0 }])}><Barcode size={14} /> Barcode box</button>
           )}
           <button type="button" className="gb-btn-ghost" onPointerDown={(e) => e.stopPropagation()} onClick={resetCover}><RotateCcw size={13} /> Reset layout</button>
-          <span className="flex-1" />
-          <span className="text-[11px] text-fog-400 tabular-nums" data-testid="cover-dims">Full wrap {g.width.toFixed(3)} × {g.height.toFixed(3)} in · spine {g.spine.toFixed(3)} in</span>
+
         </div>
         <div className="absolute inset-0 flex items-center justify-center pt-8">
           <div style={{ width: g.width * PX * scale, height: g.height * PX * scale }} className="relative">
@@ -252,7 +251,7 @@ export function CoverBuilder() {
 
       <aside className="w-[304px] shrink-0 bg-ink-800 border-l border-ink-600/80 overflow-y-auto" aria-label="Cover inspector" onPointerDown={(e) => e.stopPropagation()}>
         <Panel title="Cover size">
-          <div className="grid grid-cols-2 gap-y-3 text-[12px]">
+          <div className="grid grid-cols-2 gap-y-3 text-[12px]" data-testid="cover-dims">
             {[['Full wrap', `${g.width.toFixed(3)} × ${g.height.toFixed(3)} in`], ['Spine', `${g.spine.toFixed(3)} in`], ['Pages', String(pageCount)], ['Paper', project.settings.paper === 'cream' ? 'Cream' : 'White'], ['Trim', `${g.trimW} × ${g.trimH} in`], ['Bleed', `${g.bleed} in each edge`]].map(([k, v]) => (
               <div key={k}><div className="text-fog-100 tabular-nums">{v}</div><div className="text-[10px] uppercase tracking-wider text-fog-400 mt-0.5">{k}</div></div>
             ))}

@@ -104,11 +104,11 @@ function ExportDialog({ issues }: { issues: Issue[] }) {
   ]
   return (
     <Dialog title="Export" subtitle="Interior and cover are separate files — KDP and IngramSpark ask for them separately." width={760} onClose={close}>
-      <div className="grid grid-cols-4 gap-px bg-ink-600 rounded-lg overflow-hidden border border-ink-600" data-testid="export-summary">
-        {[['Trim size', `${s.trim.w} × ${s.trim.h} in`], ['Pages', String(pages)], ['Spine', `${spineWidth(pages, 'white').toFixed(3)} in white · ${spineWidth(pages, 'cream').toFixed(3)} in cream`], ['Full cover', `${g.width.toFixed(3)} × ${g.height.toFixed(3)} in`]].map(([k, v]) => (
-          <div key={k} className="bg-ink-900 px-4 py-3">
+      <div className="grid grid-cols-[1fr_0.6fr_1.6fr_1.2fr] gap-px bg-ink-600 rounded-lg overflow-hidden border border-ink-600" data-testid="export-summary">
+        {[['Trim size', `${s.trim.w} × ${s.trim.h} in`], ['Pages', String(pages)], ['Spine width', `${spineWidth(pages, 'white').toFixed(3)}″ white · ${spineWidth(pages, 'cream').toFixed(3)}″ cream`], ['Full cover', `${g.width.toFixed(3)} × ${g.height.toFixed(3)} in`]].map(([k, v]) => (
+          <div key={k} className="bg-ink-900 px-4 py-2.5">
             <div className="gb-label">{k}</div>
-            <div className="text-[13px] text-fog-100 mt-1.5 tabular-nums leading-snug">{v}</div>
+            <div className="text-[12.5px] text-fog-100 mt-1 tabular-nums leading-snug">{v}</div>
           </div>
         ))}
       </div>
@@ -130,25 +130,36 @@ function ExportDialog({ issues }: { issues: Issue[] }) {
         </button>
       </div>
 
-      <div className="mt-5 space-y-2" data-testid="export-list">
-        {items.map((it) => (
-          <div key={it.id} className="flex items-center gap-4 px-4 py-3 rounded-lg bg-ink-900/60 border border-ink-600">
-            <it.icon size={18} strokeWidth={1.5} className="text-fog-300 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2.5"><span className="text-[13.5px] text-white font-medium">{it.name}</span><span className="gb-chip bg-ink-600 text-fog-300">{it.tag}</span></div>
-              <div className="text-[12px] text-fog-400 mt-1 leading-snug">{it.desc}</div>
+      <div className="mt-4" data-testid="export-list">
+        <div className="space-y-2">
+          {items.slice(0, 3).map((it) => (
+            <div key={it.id} className="flex items-center gap-4 px-4 py-2.5 rounded-lg bg-ink-900/60 border border-ink-600">
+              <it.icon size={18} strokeWidth={1.5} className="text-fog-300 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2.5"><span className="text-[13.5px] text-white font-medium">{it.name}</span><span className="gb-chip bg-ink-600 text-fog-300">{it.tag}</span></div>
+                <div className="text-[12px] text-fog-400 mt-0.5 leading-snug">{it.desc}</div>
+              </div>
+              <button type="button" className={it.id === 'interior' ? 'gb-btn-solid' : 'gb-btn-outline'} disabled={busy !== null} data-testid={`export-${it.id}`} onClick={() => void run(it.id, async () => { await it.go() })}>Open print view</button>
             </div>
-            <button type="button" className={it.id === 'interior' ? 'gb-btn-solid' : 'gb-btn-outline'} disabled={busy !== null} data-testid={`export-${it.id}`} onClick={() => void run(it.id, async () => { await it.go() })}>
-              {busy === it.id ? 'Working…' : it.id === 'interior' || it.id === 'cover' || it.id === 'screen' ? 'Open print view' : 'Download'}
+          ))}
+        </div>
+        <div className="gb-label mt-5 mb-2">Other formats</div>
+        <div className="grid grid-cols-2 gap-2">
+          {items.slice(3).map((it) => (
+            <button key={it.id} type="button" disabled={busy !== null} data-testid={`export-${it.id}`} title={it.desc} onClick={() => void run(it.id, async () => { await it.go() })}
+              className="group flex items-center gap-3 px-4 h-12 rounded-lg bg-ink-900/60 border border-ink-600 text-left transition-colors duration-150 hover:border-cyan disabled:opacity-40">
+              <it.icon size={17} strokeWidth={1.5} className="text-fog-300 shrink-0 group-hover:text-cyan transition-colors" />
+              <span className="flex-1 min-w-0"><span className="text-[13px] text-white font-medium">{it.name}</span> <span className="text-[11.5px] text-fog-400 ml-1">{it.tag}</span></span>
+              <span className="text-[11.5px] text-fog-300 group-hover:text-cyan transition-colors">{busy === it.id ? 'Working…' : 'Download'}</span>
             </button>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
       {notes.length > 0 && <div className="mt-3 rounded-lg border border-amber/40 bg-amber/5 px-4 py-3 text-[12px] text-fog-200 leading-snug space-y-1">{notes.map((n) => <p key={n}>{n}</p>)}</div>}
 
-      <div className="mt-5 rounded-lg border border-ink-600 px-4 py-3.5 text-[12px] text-fog-300 leading-relaxed" data-testid="pdf-honesty">
+      <div className="mt-4 rounded-lg border border-ink-600 px-4 py-3 text-[11.5px] text-fog-300 leading-relaxed" data-testid="pdf-honesty">
         <p><span className="text-fog-100 font-medium">About these PDFs, plainly.</span> They are made by your browser's print engine, so they are RGB PDFs with real, selectable text and embedded fonts. A browser cannot produce PDF/X-1a or CMYK files, and this app does not pretend to. KDP and IngramSpark both accept RGB PDFs and convert the colour themselves, so expect small colour shifts on paper.</p>
-        <p className="mt-2"><span className="text-fog-100 font-medium">In the print window:</span> Destination “Save as PDF” · Margins “None” · untick “Headers and footers” · tick “Background graphics”. The page size is set for you.</p>
+        <p className="mt-1.5"><span className="text-fog-100 font-medium">In the print window:</span> Destination “Save as PDF” · Margins “None” · untick “Headers and footers” · tick “Background graphics”. The page size is set for you.</p>
       </div>
     </Dialog>
   )

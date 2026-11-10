@@ -4,7 +4,7 @@
  * measured in the browser, paginated by the pure core, then cut into static page slices.
  */
 import { paginateUnits, type CorePageKind, type PageFloat, type Unit } from './core'
-import { measureFlow, type Measured } from './measure'
+import { endsHyphenated, measureFlow, type Measured, type MUnit } from './measure'
 import { sliceHtml } from './fragments'
 
 export interface SourceSpec {
@@ -136,8 +136,14 @@ export function layoutSection(sources: SourceSpec[], env: LayoutEnv): SectionLay
     for (const b of m.behind) behind.push({ atUnit: b.atUnit + off, el: b.el })
   })
 
+  const hyphenCache = new Map<number, boolean>()
   const core = paginateUnits(units, floats, {
     pageHeight: env.contentH, orphans: env.orphans, widows: env.widows, footnoteHeight, footnoteGap, firstPageRecto: env.firstPageRecto,
+    hyphenBefore: (i) => {
+      let hit = hyphenCache.get(i)
+      if (hit === undefined) { hit = endsHyphenated(units[i] as MUnit).hyphen; hyphenCache.set(i, hit) }
+      return hit
+    },
   })
 
   const pages: SectionPage[] = core.map((p) => {

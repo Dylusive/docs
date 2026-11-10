@@ -76,6 +76,19 @@ describe('pagination engine', () => {
     expect(paginateUnits(forced, [], { pageHeight: 500, orphans: 2, widows: 2 })[0].to).toBe(2)
   })
 
+  it('does not end a page on a hyphenated line when another legal break exists', () => {
+    const units: Unit[] = Array.from({ length: 10 }, (_, i) => ({ src: 0, top: i * 10, bottom: i * 10 + 10, startY: i * 10, endY: i * 10 + 10, tb: 0, line: i, lines: 10 }))
+    const plain = paginateUnits(units, [], { pageHeight: 60, orphans: 2, widows: 2 })
+    expect(plain[0].to).toBe(6)
+    // the natural break (before line 6) would leave a hyphen at the foot of the page → break one line earlier
+    const careful = paginateUnits(units, [], { pageHeight: 60, orphans: 2, widows: 2, hyphenBefore: (i) => i === 6 })
+    expect(careful[0].to).toBe(5)
+    // …but if every candidate is hyphenated the text still has to go somewhere
+    const stuck = paginateUnits(units, [], { pageHeight: 60, orphans: 2, widows: 2, hyphenBefore: () => true })
+    expect(stuck[0].to).toBe(6)
+    expect(stuck.reduce((n, p) => n + (p.to - p.from), 0)).toBe(10)
+  })
+
   it('puts two-page spreads on a left-hand page and full-page figures after the current page', () => {
     const units: Unit[] = Array.from({ length: 12 }, (_, i) => ({ src: 0, top: i * 10, bottom: i * 10 + 10, startY: i * 10, endY: i * 10 + 10, tb: i, line: 0, lines: 1 }))
     const pages = paginateUnits(units, [{ id: 'spread', atUnit: 1, spread: true }, { id: 'plate', atUnit: 9, spread: false }], { pageHeight: 40, orphans: 2, widows: 2, firstPageRecto: true })

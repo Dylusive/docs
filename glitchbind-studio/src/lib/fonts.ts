@@ -75,23 +75,34 @@ export async function registerCustomFonts(fonts: CustomFont[], load: (id: string
   customDefs = defs
 }
 
-const loaded = new Set<string>()
-/** Make sure the faces a book uses are decoded before we measure text with them. */
+const inFlight = new Map<string, Promise<unknown>>()
+const ready = new Set<string>()
+/**
+ * Make sure the faces a book uses are decoded before we measure text with them.
+ * Callers that arrive while a family is still downloading wait for the same promise — measuring
+ * with a fallback font would give different line breaks from the ones that finally print.
+ */
 export async function ensureFonts(families: string[]): Promise<void> {
   if (typeof document === 'undefined' || !document.fonts) return
   const jobs: Promise<unknown>[] = []
   for (const family of new Set(families)) {
-    if (loaded.has(family)) continue
-    const f = fontByFamily(family)
-    if (!f) continue
-    loaded.add(family)
-    const weights = f.weights.includes(700) ? [400, 700] : [f.weights[0] ?? 400]
-    for (const w of weights) {
-      jobs.push(document.fonts.load(`${w} 16px "${family}"`))
-      if (f.italics.includes(w)) jobs.push(document.fonts.load(`italic ${w} 16px "${family}"`))
+    if (ready.has(family)) continue
+    let job = inFlight.get(family)
+    if (!job) {
+      const f = fontByFamily(family)
+      if (!f) continue
+      const weights = f.weights.includes(700) ? [400, 700] : [f.weights[0] ?? 400]
+      const faces: Promise<unknown>[] = []
+      for (const w of weights) {
+        faces.push(document.fonts.load(`${w} 16px "${family}"`))
+        if (f.italics.includes(w)) faces.push(document.fonts.load(`italic ${w} 16px "${family}"`))
+      }
+      job = Promise.allSettled(faces).then(() => { ready.add(family); inFlight.delete(family) })
+      inFlight.set(family, job)
     }
+    jobs.push(job)
   }
   if (!jobs.length) return
-  await Promise.race([Promise.allSettled(jobs), new Promise((r) => setTimeout(r, 4000))])
+  await Promise.race([Promise.all(jobs), new Promise((r) => setTimeout(r, 8000))])
 }
-export const fontLoadKey = (): number => loaded.size
+export const fontsReady = (families: string[]): boolean => families.every((f) => ready.has(f) || !fontByFamily(f))

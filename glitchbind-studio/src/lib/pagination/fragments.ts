@@ -4,10 +4,9 @@
  * so every page owns real text — nothing is clipped or duplicated in the printed file.
  */
 import type { Measured } from './measure'
-import { textPointAtLine } from './measure'
+import { endsHyphenated, textPointAtLine } from './measure'
 
 const STRIP_CLASSES = ['ProseMirror-selectednode', 'gb-find', 'gb-find-current', 'gb-focus-current', 'has-focus']
-const LETTER = /\p{L}/u
 
 const depthOf = (el: Element, root: Element): number => {
   let d = 0
@@ -34,16 +33,13 @@ export function sliceHtml(m: Measured, from: number, to: number): string {
 
   let endsMid = false
   let hyphen = false
-  let rest = ''
   const next = to < units.length ? units[to] : null
   if (!next) range.setEnd(root, root.childNodes.length)
   else if (next.tb >= 0 && next.line > 0) {
     endsMid = true
-    const p = textPointAtLine(next.el, next.clientTop)
-    range.setEnd(p.node, p.offset)
-    const before = p.text[p.charIndex - 1] ?? ''
-    const after = p.text[p.charIndex] ?? ''
-    hyphen = (LETTER.test(before) && LETTER.test(after)) || before === '­'
+    const end = endsHyphenated(next)
+    range.setEnd(end.point.node, end.point.offset)
+    hyphen = end.hyphen
   } else range.setEnd(next.startEl.parentNode as Node, childIndex(next.startEl))
 
   const holder = document.createElement('div')
@@ -83,21 +79,19 @@ export function sliceHtml(m: Measured, from: number, to: number): string {
       node.classList.add('gb-split-head')
     }
     if (endsMid && node) {
-      if (hyphen && rest) {
-        // The line ends in an automatic hyphen. Keep the rest of the word (invisibly) so the browser
-        // hyphenates and justifies this line exactly as it did in the flow, and pin the block's height.
+      if (getComputedStyle(next.el).textAlign === 'justify') node.classList.add('gb-split-head-j')
+      if (hyphen) {
+        // Last resort (the engine avoids ending a page on a hyphen): show the hyphen ourselves.
+        // It hangs slightly into the margin so it can never push the fragment onto another line.
         let last: Node = node
         while (last.lastChild) last = last.lastChild
+        if (last.nodeType === Node.TEXT_NODE) (last as Text).data = (last as Text).data.replace(/\u00AD$/, '')
         const span = document.createElement('span')
-        span.className = 'gb-hy-rest'
-        span.textContent = rest
+        span.className = 'gb-hy'
+        span.textContent = '-'
         if (last.nodeType === Node.TEXT_NODE) last.parentNode?.insertBefore(span, last.nextSibling)
         else node.appendChild(span)
-        const r = next.el.getBoundingClientRect()
-        const scale = root.offsetWidth > 0 ? root.getBoundingClientRect().width / root.offsetWidth : 1
-        ;(node as HTMLElement).style.height = `${(next.clientTop - r.top) / scale}px`
-        node.classList.add('gb-split-hy')
-      } else if (getComputedStyle(next.el).textAlign === 'justify') node.classList.add('gb-split-head-j')
+      }
     }
   }
 

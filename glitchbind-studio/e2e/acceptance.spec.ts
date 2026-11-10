@@ -47,6 +47,26 @@ async function printPdf(page: Page, kind: 'interior' | 'cover' | 'screen', file:
   return { job: job!, pages, widthPt: parseFloat(size[1]), heightPt: parseFloat(size[2]) }
 }
 
+/** The letters each preview page shows, straight from the layout the canvas renders. */
+const previewText = (page: Page) => page.evaluate(() => {
+  const l = window.__gb!.layout.getState()
+  return l.pages.map((p) => {
+    const d = document.createElement('div')
+    if (p.page) d.innerHTML = p.page.segments.map((s) => s.html).join(' ') + p.page.notes.map((n) => `<p>${n.text}</p>`).join(' ')
+    d.querySelectorAll('.gb-hy, .gb-fig-empty').forEach((el) => el.remove())
+    return (d.textContent ?? '') + ' ' + (p.showHeader ? p.header : '') + ' ' + (p.showFolio ? p.folio : '')
+  })
+})
+function comparePdfToPreview(file: string, expected: string[]): number {
+  let compared = 0
+  for (let i = 0; i < expected.length; i++) {
+    const text = execFileSync('pdftotext', ['-f', String(i + 1), '-l', String(i + 1), '-enc', 'UTF-8', file, '-']).toString()
+    expect(histogram(text), `PDF page ${i + 1} carries exactly the letters of preview page ${i + 1}`).toEqual(histogram(expected[i]))
+    if (Object.keys(histogram(expected[i])).length) compared++
+  }
+  return compared
+}
+
 test.describe('acceptance', () => {
   test('pagination proof: the 10,000-word fixture gives different, correct counts at 6×9 and 5.5×8.5', async ({ page }) => {
     await page.goto('/pagination-test')
@@ -225,6 +245,13 @@ test.describe('acceptance', () => {
     expect(s0.pages).toBeGreaterThan(24)
     expect(s0.pages).toBeLessThanOrEqual(150)
     expect(s0.insideIn).toBeCloseTo(0.375 + 0.25, 5)
+    // a long book full of paragraphs split (and hyphenated) across pages: the PDF still matches page for page
+    const longPdf = path.join(tmp, 'long.pdf')
+    const printed = await printPdf(page, 'interior', longPdf)
+    expect(printed.pages).toBe(s0.pages)
+    const matched = comparePdfToPreview(longPdf, await previewText(page))
+    console.log(`[pdf] long book: ${printed.pages} PDF pages, ${matched} compared letter-for-letter with the preview`)
+    expect(matched).toBeGreaterThan(120)
     // grow the book by duplicating a chapter until it crosses 150 pages
     for (let i = 0; i < 4 && (await pageCount(page)) <= 150; i++) {
       await page.evaluate(() => {
@@ -410,15 +437,7 @@ test.describe('acceptance', () => {
     await openDemo(page)
     // turn guides on to prove they never export
     await page.evaluate(() => window.__gb!.ui.getState().setPref({ guides: { margins: true, safe: true, bleed: true } }))
-    const expected = await page.evaluate(() => {
-      const l = window.__gb!.layout.getState()
-      return l.pages.map((p) => {
-        const d = document.createElement('div')
-        if (p.page) d.innerHTML = p.page.segments.map((s) => s.html).join(' ') + p.page.notes.map((n) => `<p>${n.text}</p>`).join(' ') + (p.kind === 'flow' ? '' : '')
-        d.querySelectorAll('.gb-hy-rest, .gb-fig-empty').forEach((el) => el.remove())
-        return (d.textContent ?? '') + ' ' + (p.showHeader ? p.header : '') + ' ' + (p.showFolio ? p.folio : '')
-      })
-    })
+    const expected = await previewText(page)
     const file = path.join(tmp, 'interior.pdf')
     const pdf = await printPdf(page, 'interior', file)
     console.log(`[pdf] interior: ${pdf.pages} pages, ${pdf.widthPt} × ${pdf.heightPt} pt`)
@@ -426,12 +445,7 @@ test.describe('acceptance', () => {
     expect(pdf.pages).toBe(pdf.job.pages)
     expect(pdf.widthPt).toBeCloseTo(6 * 72, 1)
     expect(pdf.heightPt).toBeCloseTo(9 * 72, 1)
-    let compared = 0
-    for (let i = 0; i < expected.length; i++) {
-      const text = execFileSync('pdftotext', ['-f', String(i + 1), '-l', String(i + 1), '-enc', 'UTF-8', file, '-']).toString()
-      expect(histogram(text), `PDF page ${i + 1} carries exactly the letters of preview page ${i + 1}`).toEqual(histogram(expected[i]))
-      if (Object.keys(histogram(expected[i])).length) compared++
-    }
+    const compared = comparePdfToPreview(file, expected)
     expect(compared).toBeGreaterThan(8)
     // fonts are embedded as real text, not an image of text
     const fonts = execFileSync('pdffonts', [file]).toString()

@@ -9,6 +9,7 @@
  *  - widows / orphans: a paragraph may only split with ≥ `orphans` lines before and ≥ `widows` after
  *  - headings stay with the line that follows them (keepWithNext)
  *  - nothing splits inside a float's wrap zone (noBreakBefore) or an unbreakable block
+ *  - a page does not end on a hyphenated word (when any other legal break exists)
  *  - forced page breaks, full-page illustrations and two-page spreads (which must start on a left page)
  */
 export interface Unit {
@@ -43,6 +44,11 @@ export interface CoreOptions {
   footnoteGap?: number
   /** true when the first page produced falls on a right-hand (recto) page */
   firstPageRecto?: boolean
+  /**
+   * Asked (lazily, only for candidate breaks inside a paragraph) whether the line before unit `i`
+   * ends in a hyphenated word. A page never ends on a hyphen unless nothing else is possible.
+   */
+  hyphenBefore?: (i: number) => boolean
 }
 
 export interface CoreSegment { src: number; from: number; to: number; y0: number; y1: number }
@@ -118,6 +124,11 @@ export function paginateUnits(units: Unit[], floats: PageFloat[], opts: CoreOpti
     const m = measure(from, to)
     return m.used + m.noteH <= opts.pageHeight + EPS
   }
+  const legal = (k: number): boolean => {
+    if (!legalBreak(units, k, opts.orphans, opts.widows)) return false
+    const u = units[k]
+    return !(u.tb >= 0 && u.line > 0 && !u.forceBreakBefore && opts.hyphenBefore?.(k))
+  }
   const blank = (at: number): CorePage => ({ kind: 'blank', from: at, to: at, segments: [], footnotes: [], used: 0, footnoteHeight: 0, overflow: false, forced: false })
 
   /** Emit every pending full-page figure anchored at or before `at`. Spreads wait for a left-hand page. */
@@ -146,9 +157,15 @@ export function paginateUnits(units: Unit[], floats: PageFloat[], opts: CoreOpti
     let forced = false
     if (b < n && !units[b].forceBreakBefore) {
       let k = b
-      while (k > a && !legalBreak(units, k, opts.orphans, opts.widows)) k--
+      while (k > a && !legal(k)) k--
       if (k > a) b = k
-      else forced = b > a + 1 || !legalBreak(units, b, opts.orphans, opts.widows)
+      else {
+        // nothing satisfies every rule: give up the no-hyphen rule first, then the others
+        k = b
+        while (k > a && !legalBreak(units, k, opts.orphans, opts.widows)) k--
+        if (k > a) b = k
+        else forced = b > a + 1 || !legalBreak(units, b, opts.orphans, opts.widows)
+      }
     }
     const m = measure(a, b)
     pages.push({

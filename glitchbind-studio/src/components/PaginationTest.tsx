@@ -67,7 +67,7 @@ async function run(trimId: string): Promise<TrimResult> {
     for (const p of layout.pages) for (const seg of p.segments) {
       if (seg.key !== 'main') continue
       probe.innerHTML = seg.html
-      probe.querySelectorAll('.gb-hy-rest').forEach((el) => el.remove())
+      probe.querySelectorAll('.gb-hy').forEach((el) => el.remove())
       charsOnPages += (probe.textContent ?? '').replace(/\s+/g, '').length
     }
     maxDrift = Math.max(maxDrift, drift(layout, geo.contentW))

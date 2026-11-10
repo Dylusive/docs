@@ -144,8 +144,7 @@
 .gb-content .gb-split-tail { text-indent: 0 !important; margin-top: 0 !important; padding-top: 0 !important; border-top: 0 !important; }
 .gb-content .gb-split-head { margin-bottom: 0 !important; padding-bottom: 0 !important; border-bottom: 0 !important; }
 .gb-content .gb-split-head-j { text-align-last: justify; }
-.gb-content .gb-split-hy { overflow: hidden; }
-.gb-content .gb-hy-rest { visibility: hidden; }
+.gb-content .gb-hy { margin-right: -0.36em; }
 .gb-content .gb-first { margin-top: 0 !important; }
 .gb-slice { display: flow-root; position: relative; }
 

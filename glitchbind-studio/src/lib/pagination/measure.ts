@@ -226,3 +226,12 @@ export function textPointAtLine(el: Element, clientTop: number): { node: Node; o
   const p = locate(lo)
   return { node: p.node, offset: p.offset, charIndex: lo, text }
 }
+
+const WORD_CHAR = /\p{L}/u
+/** Does the line before `unit` end in the middle of a word (an automatic or soft hyphen)? */
+export function endsHyphenated(unit: MUnit): { hyphen: boolean; point: ReturnType<typeof textPointAtLine> } {
+  const point = textPointAtLine(unit.el, unit.clientTop)
+  const before = point.text[point.charIndex - 1] ?? ''
+  const after = point.text[point.charIndex] ?? ''
+  return { hyphen: (WORD_CHAR.test(before) && WORD_CHAR.test(after)) || before === '\u00AD', point }
+}

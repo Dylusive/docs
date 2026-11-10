@@ -144,3 +144,6 @@
 .gb-sheet:last-child { break-after: auto; page-break-after: auto; }
 .gb-print, .gb-print * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .gb-print .gb-find, .gb-print .gb-find-current { background: none !important; }
+
+/* ---- cover ---- */
+.gb-cover-print .gb-cover-edit-only { display: none; }

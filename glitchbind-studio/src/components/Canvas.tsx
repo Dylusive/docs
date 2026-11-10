@@ -36,7 +36,7 @@ export function Canvas() {
   const fitZoom = useMemo(() => {
     const byW = (viewport.w - 24) / metrics.width
     const byH = (viewport.h - 8) / (geo.trimH + metrics.pad * 1.2)
-    return clamp(view === 'continuous' ? Math.min(byW, 1.35) : Math.min(byW, byH), ZOOM_MIN, ZOOM_MAX)
+    return clamp(view === 'continuous' ? Math.min(byW, 1.25) : Math.min(byW, byH), ZOOM_MIN, ZOOM_MAX)
   }, [viewport, metrics, geo.trimH, view])
   const zoom = fit ? fitZoom : zoomPref
   const zoomRef = useRef(zoom)
@@ -65,6 +65,16 @@ export function Canvas() {
     if (useUI.getState().currentPage !== cur) useUI.setState({ currentPage: Math.max(0, cur) })
   }, [metrics, pages.length])
   useEffect(() => { updateRange() }, [updateRange, zoom, viewport])
+
+  // changing view or zoom keeps the page you were looking at in view
+  const anchor = useRef({ view, zoom })
+  useLayoutEffect(() => {
+    if (anchor.current.view === view && anchor.current.zoom === zoom) return
+    anchor.current = { view, zoom }
+    const el = scroller.current
+    const pos = metrics.positions[useUI.getState().currentPage]
+    if (el && pos) el.scrollTop = Math.max(0, (pos.y - 28) * zoom)
+  }, [view, zoom, metrics])
 
   // mount the one live editor inside the roaming window
   useLayoutEffect(() => {
@@ -173,11 +183,12 @@ export function Canvas() {
   }
 
   const onDragOver = (e: React.DragEvent): void => {
+    // the live window follows the pointer during any drag, so text and images can be dropped on any page
+    onMouseMove(e as unknown as React.MouseEvent)
     const types = Array.from(e.dataTransfer.types)
     if (!types.includes('Files') && !types.includes('application/x-glitchbind-image')) return
     e.preventDefault()
     e.dataTransfer.dropEffect = 'copy'
-    onMouseMove(e as unknown as React.MouseEvent)
   }
   const onDrop = (e: React.DragEvent): void => {
     if ((e.target as Element).closest('.gb-live')) return // the editor handles its own drops

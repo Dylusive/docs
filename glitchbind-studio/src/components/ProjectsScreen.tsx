@@ -21,6 +21,19 @@ function timeAgo(ts: number): string {
   return new Date(ts).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+/** First launch preloads the demo book — exactly once, even if the screen mounts twice. */
+let seeding: Promise<void> | null = null
+function seedDemoOnce(): Promise<void> {
+  seeding ??= (async () => {
+    if (await getPref<boolean>('demo-seeded')) return
+    await setPref('demo-seeded', true)
+    await document.fonts.ready
+    await createDemoProject()
+    void requestPersistence()
+  })()
+  return seeding
+}
+
 function CoverThumb({ p }: { p: ProjectSummary }) {
   const img = imageUrl(p.coverImageId)
   return (
@@ -51,14 +64,7 @@ export default function ProjectsScreen() {
   }
   useEffect(() => {
     void (async () => {
-      const seeded = await getPref<boolean>('demo-seeded')
-      if (!seeded) {
-        // first launch: preload the demo book so every feature is visible in ten seconds
-        await document.fonts.ready
-        await createDemoProject()
-        await setPref('demo-seeded', true)
-        void requestPersistence()
-      }
+      await seedDemoOnce()
       await refresh()
     })()
   }, [])

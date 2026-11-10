@@ -54,7 +54,7 @@ export function CoverCanvas({ project, pageCount, mode, selected, onPointerDownI
   const g = coverGeo(project, pageCount)
   const c = project.cover
   return (
-    <div className={`gb-cover ${mode === 'print' ? 'gb-cover-print gb-print' : ''}`} style={{ position: 'relative', width: `${g.width}in`, height: `${g.height}in`, overflow: 'hidden', background: c.background }} data-testid="cover-canvas"
+    <div className={`gb-cover ${mode === 'print' ? 'gb-cover-print gb-print' : ''}`} style={{ position: 'relative', width: mode === 'print' ? `calc(${g.width}in + 1px)` : `${g.width}in`, height: mode === 'print' ? `calc(${g.height}in + 1px)` : `${g.height}in`, overflow: 'hidden', background: c.background }} data-testid="cover-canvas"
       data-width-in={g.width} data-height-in={g.height}>
       {c.backColor && <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${g.spineX}in`, background: c.backColor }} />}
       {c.spineColor && <div style={{ position: 'absolute', left: `${g.spineX}in`, top: 0, bottom: 0, width: `${g.spine}in`, background: c.spineColor }} />}

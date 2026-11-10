@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode, type CSSProperties } from 'react'
 import { ChevronDown, X, type LucideIcon } from 'lucide-react'
 import { useUI } from '@/store/ui'
 
@@ -29,13 +29,18 @@ export function Panel({ title, children, defaultOpen = true, action }: { title: 
   )
 }
 
+/** The visible label of the enclosing Field, so inputs inside it get an accessible name. */
+const FieldLabel = createContext<string | undefined>(undefined)
+
 export function Field({ label, children, hint, row }: { label: string; children: ReactNode; hint?: string; row?: boolean }) {
   return (
-    <label className={row ? 'flex items-center justify-between gap-3' : 'block'}>
-      <span className={`block text-[11.5px] text-fog-300 ${row ? '' : 'mb-1.5'}`}>{label}</span>
-      {children}
-      {hint && <span className="block text-[11px] text-fog-400 mt-1.5 leading-snug">{hint}</span>}
-    </label>
+    <FieldLabel.Provider value={label}>
+      <div className={row ? 'flex items-center justify-between gap-3' : 'block'}>
+        <span className={`block text-[11.5px] text-fog-300 ${row ? '' : 'mb-1.5'}`}>{label}</span>
+        {children}
+        {hint && <span className="block text-[11px] text-fog-400 mt-1.5 leading-snug">{hint}</span>}
+      </div>
+    </FieldLabel.Provider>
   )
 }
 
@@ -43,9 +48,13 @@ export function NumField({ value, onChange, min, max, step = 1, unit, width = 76
   value: number; onChange: (n: number) => void; min?: number; max?: number; step?: number; unit?: string; width?: number; disabled?: boolean
 }) {
   const [text, setText] = useState(String(value))
-  const focused = useRef(false)
-  useEffect(() => { if (!focused.current) setText(String(value)) }, [value])
+  const label = useContext(FieldLabel)
+  /** true only while the author is typing in this field — a field that merely has focus still follows its value */
+  const editing = useRef(false)
+  useEffect(() => { if (!editing.current) setText(String(value)) }, [value])
   const commit = (raw: string): void => {
+    if (!editing.current) return
+    editing.current = false
     let n = parseFloat(raw)
     if (Number.isNaN(n)) { setText(String(value)); return }
     if (min !== undefined) n = Math.max(min, n)
@@ -56,10 +65,9 @@ export function NumField({ value, onChange, min, max, step = 1, unit, width = 76
   }
   return (
     <span className="relative inline-flex items-center" style={{ width }}>
-      <input className="gb-input pr-6 tabular-nums" type="number" value={text} min={min} max={max} step={step} disabled={disabled}
-        onFocus={() => { focused.current = true }}
-        onChange={(e) => { setText(e.target.value); const n = parseFloat(e.target.value); if (!Number.isNaN(n) && (min === undefined || n >= min) && (max === undefined || n <= max)) onChange(n) }}
-        onBlur={(e) => { focused.current = false; commit(e.target.value) }}
+      <input className="gb-input pr-6 tabular-nums" type="number" aria-label={label} value={text} min={min} max={max} step={step} disabled={disabled}
+        onChange={(e) => { editing.current = true; setText(e.target.value); const n = parseFloat(e.target.value); if (!Number.isNaN(n) && (min === undefined || n >= min) && (max === undefined || n <= max)) onChange(n) }}
+        onBlur={(e) => commit(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} />
       {unit && <span className="absolute right-2 text-[10.5px] text-fog-400 pointer-events-none">{unit}</span>}
     </span>
@@ -67,9 +75,10 @@ export function NumField({ value, onChange, min, max, step = 1, unit, width = 76
 }
 
 export function Slider({ value, onChange, min, max, step = 1, format }: { value: number; onChange: (n: number) => void; min: number; max: number; step?: number; format?: (n: number) => string }) {
+  const label = useContext(FieldLabel)
   return (
     <span className="flex items-center gap-3">
-      <input type="range" className="flex-1 accent-cyan h-1 cursor-pointer" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} />
+      <input type="range" aria-label={label} className="flex-1 accent-cyan h-1 cursor-pointer" min={min} max={max} step={step} value={value} onChange={(e) => onChange(parseFloat(e.target.value))} />
       <span className="w-12 text-right text-[11.5px] tabular-nums text-fog-200">{format ? format(value) : value}</span>
     </span>
   )
@@ -92,10 +101,10 @@ export function Toggle({ checked, onChange, label, hint }: { checked: boolean; o
 
 export function Seg<T extends string>({ value, onChange, options, full }: { value: T; onChange: (v: T) => void; options: { value: T; label: ReactNode; tip?: string }[]; full?: boolean }) {
   return (
-    <span className={`inline-flex p-0.5 rounded-md bg-ink-900 border border-ink-600 ${full ? 'w-full' : ''}`} role="radiogroup">
+    <span className={`inline-flex shrink-0 p-0.5 rounded-md bg-ink-900 border border-ink-600 ${full ? 'w-full' : ''}`} role="radiogroup" aria-label={useContext(FieldLabel)}>
       {options.map((o) => (
-        <button key={o.value} type="button" role="radio" aria-checked={value === o.value} data-tip={o.tip} onMouseDown={(e) => e.preventDefault()} onClick={() => onChange(o.value)}
-          className={`h-7 px-2.5 rounded text-[11.5px] font-medium transition-all duration-150 inline-flex items-center justify-center gap-1.5 ${full ? 'flex-1' : ''} ${value === o.value ? 'bg-ink-600 text-white' : 'text-fog-400 hover:text-fog-100'}`}>
+        <button key={o.value} type="button" role="radio" aria-checked={value === o.value} aria-label={o.tip} data-tip={o.tip} onMouseDown={(e) => e.preventDefault()} onClick={() => onChange(o.value)}
+          className={`h-7 px-2.5 rounded text-[11.5px] font-medium whitespace-nowrap transition-all duration-150 inline-flex items-center justify-center gap-1.5 ${full ? 'flex-1' : ''} ${value === o.value ? 'bg-ink-600 text-white' : 'text-fog-400 hover:text-fog-100'}`}>
           {o.label}
         </button>
       ))}

@@ -65,7 +65,7 @@ export function FigureOverlay({ zoom }: { zoom: number }) {
     return () => cancelAnimationFrame(id)
   })
 
-  if (!fig || !box || !figId) return null
+  if (!fig || !box || !figId) return <div ref={ref} className="absolute left-0 top-0" />
   const a = fig.attrs
   const isPage = a.wrap === 'page'
   const meta = imageMeta(a.imageId)
@@ -139,8 +139,8 @@ export function FigureOverlay({ zoom }: { zoom: number }) {
   const contentLeft = box.contentX
   const contentTop = box.pageY + geo.top
   return (
-    <div ref={ref} className="absolute left-0 top-0" style={{ zIndex: 6 }} data-testid="figure-overlay">
-      <div className="gb-handles" style={{ left: box.x, top: box.y, width: box.w, height: box.h, transform: a.rotation && !isPage ? `rotate(${a.rotation}deg)` : undefined }} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+    <div ref={ref} className="absolute left-0 top-0" style={{ zIndex: 6 }}>
+      <div className="gb-handles" data-testid="figure-overlay" style={{ left: box.x, top: box.y, width: box.w, height: box.h, transform: a.rotation && !isPage ? `rotate(${a.rotation}deg)` : undefined }} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
         {a.wrap === 'behind' && <div className="gb-handle-move" data-testid="figure-move" onPointerDown={onDown('move')} />}
         {!isPage && a.wrap !== 'full' && corners.map(({ c, style }) => <div key={c} className="gb-handle" data-testid={`handle-${c}`} style={style} onPointerDown={onDown('resize', c)} />)}
         {!isPage && <div className="gb-handle-rot" data-testid="handle-rotate" title="Rotate (Shift = 15° steps)" onPointerDown={onDown('rotate')} />}

@@ -4,7 +4,7 @@ import { useProject } from '@/store/project'
 import { useUI, loadPrefs } from '@/store/ui'
 import { useLayout } from '@/store/layout'
 import { navigate } from '@/lib/router'
-import { controller } from '@/lib/editor/controller'
+import { controller, canvasBridge } from '@/lib/editor/controller'
 import { editorCtx } from '@/lib/editor/extensions'
 import { invalidateLayout, scheduleLayout } from '@/lib/layoutManager'
 import { clamp } from '@/lib/units'
@@ -21,6 +21,10 @@ import { runPreflight } from '@/lib/preflight'
 import { printBook } from '@/lib/export/print'
 import { ProofMode } from './ProofMode'
 import { CoverBuilder } from './CoverBuilder'
+
+declare global { interface Window { __gb?: { layout: typeof useLayout; project: typeof useProject; ui: typeof useUI; controller: typeof controller; reveal: (page: number) => void } } }
+// a small handle for the automated tests and for curious authors in DevTools; it exposes nothing outside this tab
+if (typeof window !== 'undefined') window.__gb = { layout: useLayout, project: useProject, ui: useUI, controller, reveal: (page) => canvasBridge.revealPage(page) }
 
 export default function Studio({ id }: { id: string }) {
   const project = useProject((s) => s.project)
@@ -57,7 +61,7 @@ export default function Studio({ id }: { id: string }) {
   // global shortcuts
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      const mod = e.ctrlKey || e.metaKey
+      const mod = (e.ctrlKey || e.metaKey) && !e.altKey
       const k = e.key.toLowerCase()
       const s = useUI.getState()
       const inField = (e.target as HTMLElement | null)?.closest?.('input, textarea, select') !== null

@@ -16,7 +16,9 @@ export function chapterTitleFrom(line: string): string | null {
   if (m[4]) return m[4].charAt(0).toUpperCase() + m[4].slice(1).toLowerCase()
   const rest = (m[3] ?? '').trim()
   if (rest) return rest
-  return `${m[1].charAt(0).toUpperCase()}${m[1].slice(1).toLowerCase()} ${m[2].length > 4 ? m[2].charAt(0).toUpperCase() + m[2].slice(1).toLowerCase() : m[2].toUpperCase()}`
+  const n = m[2]
+  const num = /^\d+$/.test(n) ? n : /^[ivxlcdm]+$/i.test(n) && !/^(mix|mid|civil|dim|lid|mild|vivid|did|ill)$/i.test(n) ? n.toUpperCase() : n.charAt(0).toUpperCase() + n.slice(1).toLowerCase()
+  return `${m[1].charAt(0).toUpperCase()}${m[1].slice(1).toLowerCase()} ${num}`
 }
 
 const inlineMd = (s: string): string =>

@@ -8,6 +8,8 @@ import { ensureFonts } from '@/lib/fonts'
 import { openerHtml } from '@/lib/generated'
 import { trimById } from '@/lib/kdp'
 import type { BookSettings } from '@/types'
+import { createStressProject } from '@/lib/stress'
+import { navigate } from '@/lib/router'
 
 interface TrimResult {
   trim: string; contentIn: string; pages: number; perChapter: number[]; lines: number; ms: number
@@ -101,13 +103,17 @@ export default function PaginationTest() {
   return (
     <div className="h-full overflow-auto bg-ink-900 text-fog-100 font-ui">
       <div className="max-w-6xl mx-auto px-8 py-12">
-        <a href="/" className="text-xs uppercase tracking-[0.2em] text-fog-400 hover:text-cyan transition-colors">← GlitchBind Studio</a>
+        <a href="/" onClick={(e) => { e.preventDefault(); navigate('/') }} className="text-xs uppercase tracking-[0.2em] text-fog-400 hover:text-cyan transition-colors">← GlitchBind Studio</a>
         <h1 className="font-display text-3xl mt-4">Pagination proof</h1>
         <p className="text-fog-300 mt-3 max-w-2xl leading-relaxed">
           {FIXTURE_WORDS.toLocaleString()} words of real prose (<em>The Wind in the Willows</em>, public domain) are laid out by the browser,
           measured line by line, and split into real pages at two trim sizes. Counts must differ, every word must land on exactly one page,
           no page may overflow, and each static page slice must match the height the engine planned for it.
         </p>
+        <div className="mt-6 flex flex-wrap gap-2">
+          <button type="button" className="gb-btn-outline" data-testid="stress-300" onClick={() => void createStressProject(30, 3700, 50).then((p) => navigate(`/book/${p.id}`))}>Build a 300-page performance book (50 images)</button>
+          <button type="button" className="gb-btn-ghost" data-testid="stress-gutter" onClick={() => void createStressProject(12, 4300, 0).then((p) => navigate(`/book/${p.id}`))}>Build a ~145-page book (to watch the KDP gutter change at 150)</button>
+        </div>
         {!results && <div className="mt-12 text-cyan font-mono text-sm" data-testid="proof-running">Measuring…</div>}
         {results && (
           <>

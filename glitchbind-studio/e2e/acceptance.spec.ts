@@ -644,6 +644,30 @@ test.describe('acceptance', () => {
     await page.evaluate(() => { const c = window.__gb!.controller; let at = -1; c.view!.state.doc.descendants((n, pos) => { if (at < 0 && n.isText && n.text!.includes('Nobody applied')) at = pos; return at < 0 }); c.select(at, at + 6); c.focus() })
     await page.getByLabel('Bold  Ctrl+B').click()
     await expect(page.locator('.gb-live strong').first()).toHaveText('Nobody')
+    // pull quotes are real draggable blocks: drag one to a new place in the text
+    const blockOrder = () => page.evaluate(() => { const out: string[] = []; window.__gb!.controller.view!.state.doc.forEach((n) => out.push(n.type.name)); return out })
+    const pqBefore = (await blockOrder()).indexOf('pullQuote')
+    const pqPage = await page.evaluate(() => { const c = window.__gb!.controller; let pos = -1; c.view!.state.doc.descendants((n, at) => { if (n.type.name === 'pullQuote') pos = at + 1 }); c.select(pos); return c.caretPage() })
+    await reveal(page, pqPage)
+    const dragged = await page.evaluate(() => {
+      const pq = document.querySelector('.gb-live .gb-pullquote') as HTMLElement
+      const target = document.querySelectorAll('.gb-live > p')[3] as HTMLElement
+      const r = pq.getBoundingClientRect(); const t = target.getBoundingClientRect()
+      pq.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: r.left + 20, clientY: r.top + 10, button: 0 }))
+      const draggable = pq.draggable
+      const dt = new DataTransfer()
+      pq.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: r.left + 20, clientY: r.top + 10 }))
+      target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: t.left + 30, clientY: t.top + 3 }))
+      target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: dt, clientX: t.left + 30, clientY: t.top + 3 }))
+      pq.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }))
+      return draggable
+    })
+    expect(dragged).toBe(true)
+    await settle(page)
+    const pqAfter = (await blockOrder()).indexOf('pullQuote')
+    expect(pqAfter).toBeGreaterThan(-1)
+    expect(pqAfter).toBeLessThan(pqBefore)
+    expect((await blockOrder()).filter((n) => n === 'pullQuote').length).toBe(1)
     // a footnote: numbered by position, text set at the foot of the page
     await caretInto(page, 'The night the map arrived')
     const notes0 = await page.locator('.gb-live sup.gb-fn').count()

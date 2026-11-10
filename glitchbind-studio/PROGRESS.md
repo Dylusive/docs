@@ -5,9 +5,9 @@ Resume here: run `git log --oneline -- glitchbind-studio`, read `DECISIONS.md`, 
 | Phase | What | Status |
 | --- | --- | --- |
 | 0 | Pagination proof: engine, 10k-word fixture, `/pagination-test`, unit tests | **done** |
-| 1 | Scaffold, design system, layout, projects + IndexedDB | next |
-| 2 | Pagination engine in the live editor, trims/presets/gutter, spread/zoom | |
-| 3 | Formatting, styles, footnotes/pull quotes/tables, fonts/colour/themes | |
+| 1 | Scaffold, design system, layout, projects + IndexedDB | **done** |
+| 2 | Pagination engine in the live editor, trims/presets/gutter, spread/zoom | **done** |
+| 3 | Formatting, styles, footnotes/pull quotes/tables, fonts/colour/themes | in progress (toolbar, inspector, themes written; needs browser testing) |
 | 4 | Images: inserts, wrap/crop/library/DPI, illustrated + spread pages | |
 | 5 | Metadata, front/back matter, auto TOC, headers/footers, Proof Mode | |
 | 6 | Cover Builder, Preflight, all exports | |

@@ -99,6 +99,8 @@ export interface ImageMeta {
   height: number
   bytes: number
   createdAt: number
+  /** false when the pixels are all grey; undefined when unknown (treated as colour) */
+  hasColor?: boolean
 }
 
 export interface CustomFont { id: string; family: string; fileName: string; format: string; licenceConfirmed: boolean }

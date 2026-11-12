@@ -1,0 +1,38 @@
+@import './fonts.generated.css';
+@import './book.css';
+@import './studio.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+body { margin: 0; background: #0B0B10; color: #D8D8E4; font-family: Inter, system-ui, sans-serif; font-size: 13px; -webkit-font-smoothing: antialiased; overflow: hidden; }
+* { scrollbar-width: thin; scrollbar-color: #34344A transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: #44445c; background-clip: content-box; border: 2px solid transparent; }
+::selection { background: rgba(0, 229, 255, 0.28); }
+button { font: inherit; color: inherit; }
+input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 1.5px solid #00E5FF; outline-offset: 1px; }
+
+@layer components {
+  .gb-label { @apply text-[10.5px] font-medium uppercase tracking-[0.14em] text-fog-400; }
+  .gb-input { @apply h-8 w-full rounded-md bg-ink-900 border border-ink-600 px-2.5 text-[12.5px] text-fog-100 transition-colors duration-150 hover:border-ink-500 focus:border-cyan focus:outline-none; }
+  .gb-btn { @apply inline-flex items-center justify-center gap-2 h-8 px-3 rounded-md text-[12.5px] font-medium transition-all duration-150 ease-out select-none whitespace-nowrap disabled:opacity-35 disabled:pointer-events-none; }
+  .gb-btn-ghost { @apply gb-btn text-fog-200 hover:bg-ink-600 hover:text-white; }
+  .gb-btn-outline { @apply gb-btn border border-ink-500 text-fog-100 hover:border-cyan hover:text-cyan; }
+  .gb-btn-solid { @apply gb-btn bg-cyan text-ink-950 hover:brightness-110; }
+  .gb-btn-danger { @apply gb-btn border border-danger/50 text-danger hover:bg-danger/10; }
+  .gb-icon-btn { @apply inline-flex items-center justify-center h-8 w-8 rounded-md text-fog-300 transition-all duration-150 ease-out hover:bg-ink-600 hover:text-white disabled:opacity-30 disabled:pointer-events-none; }
+  .gb-icon-btn[data-active='true'] { @apply bg-cyan/10 text-cyan; }
+  .gb-chip { @apply inline-flex items-center gap-1.5 h-6 px-2 rounded text-[11px] font-medium; }
+}
+
+/* ---------- print: only the print root is visible ---------- */
+#print-root { display: none; }
+@media print {
+  html, body { height: auto !important; overflow: visible !important; background: #fff !important; }
+  #root { display: none !important; }
+  #print-root { display: block !important; }
+}

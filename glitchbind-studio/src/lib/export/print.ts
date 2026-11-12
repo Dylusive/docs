@@ -10,7 +10,7 @@ import { useProject } from '@/store/project'
 import { useLayout } from '@/store/layout'
 import { useUI } from '@/store/ui'
 import { controller } from '@/lib/editor/controller'
-import { runLayout } from '@/lib/layoutManager'
+import { runLayout, scheduleLayout } from '@/lib/layoutManager'
 import { PrintView } from '@/components/PrintView'
 import { CoverCanvas } from '@/components/CoverBuilder'
 import { coverGeometry } from '@/lib/kdp'
@@ -27,6 +27,8 @@ export function cleanupPrint(): void {
   root = null
   pageStyle?.remove()
   pageStyle = null
+  // anything that changed while the app was hidden behind the print view gets laid out now
+  requestAnimationFrame(() => scheduleLayout())
 }
 
 /** Sheet size of each export, in inches. */

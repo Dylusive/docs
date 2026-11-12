@@ -37,7 +37,8 @@ export function SelectionOverlay({ metrics, geo, mirrored }: { metrics: CanvasMe
       range.setEnd(b.node, b.offset)
     } catch { return }
     const rr = root.getBoundingClientRect()
-    const scale = root.offsetWidth ? rr.width / root.offsetWidth : 1
+    if (rr.width < 1 || !root.offsetWidth) return // hidden (print view showing)
+    const scale = rr.width / root.offsetWidth
     const flow = Array.from(range.getClientRects()).filter((r) => r.width > 0.5 && r.height > 2).slice(0, 1500)
       .map((r) => ({ x: (r.left - rr.left) / scale, y: (r.top - rr.top) / scale, w: r.width / scale, h: r.height / scale }))
     const out: Rect[] = []

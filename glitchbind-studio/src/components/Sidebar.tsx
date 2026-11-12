@@ -43,12 +43,18 @@ function StructureTab() {
         onDragStart={(e) => { setDragId(s.id); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/x-gb-section', s.id) }}
         onDragEnd={() => { setDragId(null); setDropAt(null) }}
         onDragOver={(e) => {
-          if (!dragId) return
+          if (!dragId && !Array.from(e.dataTransfer.types).includes('text/x-gb-section')) return
           e.preventDefault()
           const r = e.currentTarget.getBoundingClientRect()
           setDropAt(e.clientY < r.top + r.height / 2 ? i : i + 1)
         }}
-        onDrop={(e) => { e.preventDefault(); if (dragId && dropAt !== null) moveSection(dragId, dropAt); setDragId(null); setDropAt(null) }}
+        onDrop={(e) => {
+          e.preventDefault()
+          const id = dragId ?? e.dataTransfer.getData('text/x-gb-section')
+          const r = e.currentTarget.getBoundingClientRect()
+          if (id) moveSection(id, e.clientY < r.top + r.height / 2 ? i : i + 1)
+          setDragId(null); setDropAt(null)
+        }}
         className={`group relative flex items-center h-9 pl-1 pr-1.5 mx-2 rounded-md cursor-pointer transition-colors duration-150 ${isActive ? 'bg-ink-600/80 text-white' : 'text-fog-200 hover:bg-ink-700'} ${dragId === s.id ? 'opacity-40' : ''}`}
         onClick={() => jumpToSection(s.id)}>
         {dropAt === i && dragId && <span className="absolute -top-px left-2 right-2 h-0.5 bg-cyan rounded" />}

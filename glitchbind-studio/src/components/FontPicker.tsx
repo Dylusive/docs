@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { ChevronDown, Search } from 'lucide-react'
 import { FONT_GROUPS, allFonts, fontStack } from '@/lib/fonts'
 import { Popover } from './ui'
@@ -6,7 +6,8 @@ import { Popover } from './ui'
 /** Font menu with every family previewed in its own face. */
 export function FontPicker({ value, onChange, label, allowDefault }: { value: string | null; onChange: (family: string | null) => void; label: string; allowDefault?: string }) {
   const [q, setQ] = useState('')
-  const fonts = useMemo(() => allFonts().filter((f) => f.family.toLowerCase().includes(q.toLowerCase())), [q])
+  // not memoised: the list must include fonts the author uploads while the app is open
+  const fonts = allFonts().filter((f) => f.family.toLowerCase().includes(q.toLowerCase()))
   return (
     <Popover width={264} trigger={(_open, toggle) => (
       <button type="button" className="gb-input flex items-center justify-between text-left" aria-label={label} onMouseDown={(e) => e.preventDefault()} onClick={toggle}>

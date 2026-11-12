@@ -48,14 +48,28 @@ async function printPdf(page: Page, kind: 'interior' | 'cover' | 'screen', file:
 }
 
 /** The letters each preview page shows, straight from the layout the canvas renders. */
-const previewText = (page: Page) => page.evaluate(() => {
+const previewText = (page: Page) => page.evaluate(async () => {
   const l = window.__gb!.layout.getState()
-  return l.pages.map((p) => {
+  // SVG pictures are embedded as vectors, so any words drawn inside them are real text in the PDF too
+  const svgText = new Map<string, string>()
+  const svgWords = async (src: string): Promise<string> => {
+    if (!svgText.has(src)) {
+      const blob = await (await fetch(src)).blob()
+      const doc = blob.type === 'image/svg+xml' ? new DOMParser().parseFromString(await blob.text(), 'image/svg+xml') : null
+      svgText.set(src, doc ? Array.from(doc.querySelectorAll('text')).map((t) => t.textContent).join(' ') : '')
+    }
+    return svgText.get(src)!
+  }
+  const out: string[] = []
+  for (const p of l.pages) {
     const d = document.createElement('div')
-    if (p.page) d.innerHTML = p.page.segments.map((s) => s.html).join(' ') + p.page.notes.map((n) => `<p>${n.text}</p>`).join(' ')
+    if (p.page) d.innerHTML = [...p.page.segments.map((s) => s.html), p.page.figureHtml ?? '', ...p.page.behind].join(' ') + p.page.notes.map((n) => `<p>${n.text}</p>`).join(' ')
     d.querySelectorAll('.gb-hy, .gb-fig-empty').forEach((el) => el.remove())
-    return (d.textContent ?? '') + ' ' + (p.showHeader ? p.header : '') + ' ' + (p.showFolio ? p.folio : '')
-  })
+    let pictures = ''
+    for (const img of Array.from(d.querySelectorAll('img'))) pictures += ' ' + (await svgWords(img.getAttribute('src') ?? ''))
+    out.push((d.textContent ?? '') + pictures + ' ' + (p.showHeader ? p.header : '') + ' ' + (p.showFolio ? p.folio : ''))
+  }
+  return out
 })
 function comparePdfToPreview(file: string, expected: string[]): number {
   let compared = 0

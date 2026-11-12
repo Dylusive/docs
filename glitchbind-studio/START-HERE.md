@@ -4,21 +4,31 @@ GlitchBind Studio is a book-making app that runs on your own computer, inside yo
 
 This page is the whole manual for getting it running. The same guide is inside the app: open the **⋯** menu (top right) and choose **Help & getting started**.
 
+## Getting it onto your computer
+
+1. Install **Node.js** once: go to nodejs.org and install the version marked **LTS**. It is the engine the app runs on.
+2. Download the app. On the project's GitHub page click the green **Code** button, then **Download ZIP**. Unzip it somewhere you will find it again, such as your Documents folder.
+3. Open the unzipped folder and go into the `glitchbind-studio` folder.
+
 ## Starting the app every day
 
-You need Node.js installed once (download the "LTS" version from nodejs.org).
+**The easy way: double-click.**
 
-1. Open a terminal (Windows: "Command Prompt" or "PowerShell"; Mac: "Terminal") and go to the `glitchbind-studio` folder.
-2. Type these two commands, pressing Enter after each:
+- Windows: double-click **Start GlitchBind (Windows)**.
+- Mac: double-click **Start GlitchBind (Mac)**. The first time, macOS may refuse because the file came from the internet. If so, right-click the file, choose **Open**, then **Open** again. You only do that once.
+
+A black window appears, sets things up the first time (a minute or two, and it needs the internet that one time), then your browser opens with the app. Keep the black window open while you work. Closing it stops the app.
+
+**The typed way.** Open a terminal in the `glitchbind-studio` folder and type these two commands, pressing Enter after each:
 
 ```
 npm install
 npm run dev
 ```
 
-`npm install` is only needed the very first time, or after you update the app. `npm run dev` prints an address, normally `http://localhost:5173`. Open that address in Chrome or Edge. Leave the terminal window open while you work; closing it stops the app.
+`npm install` is only needed the very first time, or after you update the app. `npm run dev` prints an address, normally `http://localhost:5173`. Open that address in Chrome or Edge.
 
-The first time you open it, a demo book is already on your shelf so you can see everything working.
+The first time you open the app, a demo book is already on your shelf so you can see everything working.
 
 ## Installing it as a desktop app
 

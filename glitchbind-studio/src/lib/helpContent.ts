@@ -4,7 +4,11 @@ export interface HelpSection { title: string; body: string[]; steps?: string[] }
 export const HELP: HelpSection[] = [
   {
     title: 'Starting the app each day',
-    body: ['GlitchBind Studio runs on your own computer. Nothing is uploaded anywhere. To start it, open a terminal in the glitchbind-studio folder and type these two commands:'],
+    body: [
+      'GlitchBind Studio runs on your own computer. Nothing is uploaded anywhere.',
+      'The easy way: in the glitchbind-studio folder, double-click “Start GlitchBind (Windows)” or “Start GlitchBind (Mac)”. A window appears, sets things up the first time, and your browser opens with the app. Keep that window open while you work. (On a Mac, the first time you may need to right-click the file and choose Open.)',
+      'The typed way: open a terminal in the glitchbind-studio folder and type these two commands:',
+    ],
     steps: ['npm install   (only needed the very first time, or after an update)', 'npm run dev   (then open the address it prints, normally http://localhost:5173)'],
   },
   {

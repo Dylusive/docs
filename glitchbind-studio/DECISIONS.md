@@ -20,8 +20,14 @@ Professional choices made during the build. Anything not finished is marked **DE
 - The export is labelled **KDP-Ready Print PDF (RGB)**. The app never claims PDF/X or CMYK; the Export dialog says so plainly.
 - **Page size precision.** Chrome snaps PDF page sizes to a 1/300-inch grid. Sizes such as 6 × 9 in are exact; a 6.125 in bleed sheet comes out 0.002 in narrow and the demo cover 0.005 in wide. This is inside printer tolerance and is reported in the test output, not hidden.
 - With bleed on, each interior sheet is trim + 0.125 in on the top, bottom and outside edge, none at the spine.
-- **Image adjustments in the PDF.** Brightness, contrast and the other adjustments are CSS filters. The browser may rasterise a filtered image when printing, and I did not measure at what resolution. Crop, size, rotation, border and radius are vector operations. EPUB and DOCX bake crop and adjustments into a new bitmap; the stored original is never changed.
+- **Image adjustments in the PDF.** Brightness, contrast and the other adjustments are CSS filters. Measured: Chrome rasterises a filtered image at 300 ppi when printing; unfiltered images (including cropped, rotated or rounded ones) are embedded untouched at their original pixels. Crop, size, rotation, border and radius are vector operations. EPUB and DOCX bake crop and adjustments into a new bitmap; the stored original is never changed.
 - **KDP gutter.** The inside margin is the KDP table value plus a "comfort" allowance (0.25 in by default) so pages are not cramped at the minimum. The page count and gutter are solved together and the author is told when a band is crossed.
+
+- **Static pages use the browser's DOM.** `@tiptap/html`'s `generateHTML` uses a virtual DOM that drops CSS it does not know (for example `aspect-ratio`). Pages that are not being edited are therefore serialised with ProseMirror's `DOMSerializer` and the real `document`, so they are identical to the live editor.
+
+## Getting it onto a computer
+
+- `Start GlitchBind (Windows).bat` and `Start GlitchBind (Mac).command` (and `start-glitchbind.sh` for Linux) check for Node.js, run `npm install` the first time, then `npm start`, which opens the browser. This keeps the "no server, all local" promise: the app runs from the author's own machine.
 
 ## Editor choices
 

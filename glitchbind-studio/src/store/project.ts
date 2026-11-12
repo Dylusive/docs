@@ -56,8 +56,10 @@ export const useProject = create<ProjectState>((set, get) => ({
   },
   adopt: (p) => set({ project: p, saveState: 'dirty', past: [], future: [] }),
   close: async () => {
+    const closing = get().project
     await get().save()
-    set({ project: null, past: [], future: [] })
+    // only clear the store if the same book is still open (a slow save must not wipe a book opened meanwhile)
+    if (get().project === closing || get().project?.id === closing?.id) set({ project: null, past: [], future: [] })
   },
   mutate: (fn, opts) => {
     const cur = get().project

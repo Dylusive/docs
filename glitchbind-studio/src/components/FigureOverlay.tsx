@@ -49,6 +49,8 @@ export function FigureOverlay({ zoom }: { zoom: number }) {
       const frame = (f.el.querySelector('.gb-fig-frame') as HTMLElement | null) ?? f.el
       const wr = world.getBoundingClientRect()
       const r = frame.getBoundingClientRect()
+      // while the app is hidden (print view showing) nothing has a size: keep the last good box
+      if (wr.width < 1 || !(world as HTMLElement).offsetWidth) return
       const z = wr.width / (world as HTMLElement).offsetWidth
       const pageEl = (f.el.closest('.gb-page') ?? document.querySelector('.gb-page[data-live="true"]')) as HTMLElement | null
       const page = pageEl?.getBoundingClientRect()
@@ -58,6 +60,7 @@ export function FigureOverlay({ zoom }: { zoom: number }) {
       const cx = (r.left + r.width / 2 - wr.left) / z
       const cy = (r.top + r.height / 2 - wr.top) / z
       const next: Box = { x: cx - w / 2, y: cy - h / 2, w, h, pageX: page ? (page.left - wr.left) / z : 0, pageY: page ? (page.top - wr.top) / z : 0, contentX: (page ? (page.left - wr.left) / z : 0) + (content?.offsetLeft ?? 0) }
+      if (![next.x, next.y, next.w, next.h, next.pageX, next.pageY, next.contentX].every(Number.isFinite)) return
       setBox((b) => (b && Math.abs(b.x - next.x) < 0.2 && Math.abs(b.y - next.y) < 0.2 && Math.abs(b.w - next.w) < 0.2 && Math.abs(b.h - next.h) < 0.2 && b.pageX === next.pageX && b.pageY === next.pageY ? b : next))
     }
     measure()

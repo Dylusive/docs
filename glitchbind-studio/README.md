@@ -2,7 +2,7 @@
 
 An offline book-creation studio: write, drop in pictures, style the book, see the real printed pages as you type, then export a print PDF that matches the preview.
 
-New here and not a programmer? Read **[START-HERE.md](START-HERE.md)**.
+New here and not a programmer? Read **[START-HERE.md](START-HERE.md)**, or just double-click **Start GlitchBind (Windows)** / **Start GlitchBind (Mac)**.
 
 ```
 npm install
@@ -11,6 +11,7 @@ npm run dev        # http://localhost:5173
 
 | Command | What it does |
 | --- | --- |
+| `npm start` | start the app and open the browser |
 | `npm run dev` | start the app for daily use |
 | `npm run build` | type-check and build the production app into `dist/` |
 | `npm run preview` | serve the production build (installable, works offline) |

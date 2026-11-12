@@ -27,6 +27,7 @@ let raf = 0
 let tocUsed = ''
 let lastBand: { projectId: string; inside: number } | null = null
 let fontsKey = ''
+let pendingWhileHidden = false
 
 const docId = (doc: object | null): number => {
   if (!doc) return 0
@@ -47,6 +48,7 @@ export function scheduleLayout(): void {
 export function invalidateLayout(): void { cache.clear(); scheduleLayout() }
 
 if (typeof document !== 'undefined') {
+  window.addEventListener('afterprint', () => { if (pendingWhileHidden) { pendingWhileHidden = false; scheduleLayout() } })
   document.fonts?.addEventListener('loadingdone', () => { fontEpoch++; scheduleLayout() })
   onImagesChange(() => scheduleLayout())
 }
@@ -110,6 +112,9 @@ function layoutAll(p: Project, geo: PageGeometry, lk: string): { asm: Assembled;
 export function runLayout(): void {
   const p = useProject.getState().project
   if (!p) return
+  // The live editor cannot be measured while the app is hidden behind the print view; try again afterwards.
+  const liveRoot = controller.root()
+  if (liveRoot && liveRoot.isConnected && liveRoot.offsetWidth === 0) { pendingWhileHidden = true; return }
   const fam = usedFamilies(p)
   const fk = fam.join('|')
   if (fk !== fontsKey) {
